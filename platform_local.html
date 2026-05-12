@@ -1,0 +1,3445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Perception vs Reality · Research Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<style>
+:root {
+  --bg: #f5f0e8;
+  --surface: #faf7f2;
+  --surface2: #ede8de;
+  --border: #d6cfc2;
+  --border-light: #e8e2d8;
+  --accent: #c0541a;
+  --text: #1a1714;
+  --text-dim: #7a6f62;
+  --over: #c0341a;
+  --under: #1a52a0;
+  --exact: #2a7a52;
+  --purple: #6b46a8;
+  --amber: #a07020;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: 'DM Mono', monospace; font-size: 13px; min-height: 100vh; }
+
+/* ── UPLOAD SCREEN ── */
+#uploadScreen {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  gap: 32px;
+}
+.upload-header { text-align: center; }
+.upload-header h1 { font-family: 'Syne', sans-serif; font-size: 32px; font-weight: 800; letter-spacing: -0.5px; }
+.upload-header h1 span { color: var(--accent); }
+.upload-header p { margin-top: 8px; color: var(--text-dim); font-size: 12px; letter-spacing: 0.5px; max-width: 480px; line-height: 1.7; }
+
+.upload-box {
+  width: 100%; max-width: 560px;
+  border: 2px dashed var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  padding: 40px 40px 32px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+  position: relative;
+}
+.upload-box:hover, .upload-box.drag-over { border-color: var(--accent); background: var(--surface2); }
+.upload-box input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width:100%; height:100%; }
+.upload-icon { font-size: 32px; margin-bottom: 12px; }
+.upload-box h3 { font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 700; margin-bottom: 6px; }
+.upload-box p { font-size: 11px; color: var(--text-dim); line-height: 1.6; }
+.upload-box .btn-upload {
+  margin-top: 20px;
+  display: inline-block;
+  background: var(--accent); color: #fff;
+  font-family: 'DM Mono', monospace; font-size: 11px;
+  letter-spacing: 1px; text-transform: uppercase;
+  padding: 10px 24px; border-radius: 3px; border: none; cursor: pointer;
+}
+/* File list */
+.file-list {
+  width: 100%; max-width: 560px;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.file-item {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--surface); border: 1px solid var(--border);
+  padding: 10px 14px; border-radius: 3px;
+}
+.file-item-icon { font-size: 16px; flex-shrink: 0; }
+.file-item-name { flex: 1; font-size: 11px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.file-item-size { font-size: 10px; color: var(--text-dim); flex-shrink: 0; }
+.file-item-remove { background: none; border: none; cursor: pointer; color: var(--text-dim); font-size: 14px; padding: 0 2px; line-height: 1; transition: color 0.15s; }
+.file-item-remove:hover { color: var(--over); }
+.add-more-btn {
+  background: none; border: 1px dashed var(--border); color: var(--text-dim);
+  font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 1px;
+  text-transform: uppercase; padding: 8px; border-radius: 3px; cursor: pointer;
+  width: 100%; transition: border-color 0.15s, color 0.15s; position: relative;
+}
+.add-more-btn:hover { border-color: var(--accent); color: var(--accent); }
+.add-more-btn input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; }
+.upload-proceed-btn {
+  width: 100%; max-width: 560px;
+  background: var(--accent); color: #fff; border: none; cursor: pointer;
+  font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 1px;
+  text-transform: uppercase; padding: 12px; border-radius: 3px; transition: opacity 0.2s;
+}
+.upload-proceed-btn:hover { opacity: 0.85; }
+/* Merge plan box */
+.merge-plan-box {
+  width: 100%; max-width: 760px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 4px; padding: 24px 28px;
+}
+.file-summary-grid { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+.file-summary-row {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 12px 14px; background: var(--bg); border: 1px solid var(--border-light); border-radius: 3px;
+}
+.file-summary-name { font-size: 11px; font-weight: 500; min-width: 140px; flex-shrink: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.file-summary-desc { font-size: 11px; color: var(--text-dim); flex: 1; line-height: 1.6; }
+.file-summary-badge { font-size: 9px; padding: 2px 6px; border-radius: 2px; background: rgba(107,70,168,0.1); color: var(--purple); flex-shrink: 0; white-space: nowrap; }
+/* Join config */
+.join-config { margin-top: 4px; }
+.join-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid var(--border-light); flex-wrap: wrap; }
+.join-label { font-size: 11px; color: var(--text-dim); min-width: 200px; }
+.join-select {
+  background: var(--bg); border: 1px solid var(--border); color: var(--text);
+  font-family: 'DM Mono', monospace; font-size: 11px;
+  padding: 5px 8px; border-radius: 3px; outline: none;
+}
+.join-select:focus { border-color: var(--accent); }
+.join-type-select {
+  background: var(--bg); border: 1px solid var(--border); color: var(--text);
+  font-family: 'DM Mono', monospace; font-size: 11px;
+  padding: 5px 8px; border-radius: 3px; outline: none; min-width: 120px;
+}
+
+.spec-box {
+  width: 100%; max-width: 560px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 20px 24px;
+}
+.spec-box h4 { font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--text-dim); margin-bottom: 12px; }
+.spec-section { margin-bottom: 14px; }
+.spec-section:last-child { margin-bottom: 0; }
+.spec-label { font-size: 10px; color: var(--accent); font-weight: 500; margin-bottom: 4px; }
+.spec-cols { display: flex; flex-wrap: wrap; gap: 4px; }
+.spec-tag {
+  background: var(--surface2); border: 1px solid var(--border);
+  padding: 2px 7px; border-radius: 2px; font-size: 10px; color: var(--text-dim);
+}
+.spec-tag.required { border-color: rgba(192,52,26,0.3); color: var(--accent); background: rgba(192,52,26,0.05); }
+.spec-note { font-size: 10px; color: var(--text-dim); margin-top: 6px; line-height: 1.6; font-style: italic; }
+
+.upload-error {
+  color: var(--over); font-size: 12px; text-align: center;
+  background: rgba(192,52,26,0.08); border: 1px solid rgba(192,52,26,0.2);
+  padding: 10px 16px; border-radius: 3px; max-width: 560px; width: 100%;
+  display: none;
+}
+
+/* ── DASHBOARD ── */
+#dashboard { display: none; }
+
+/* NAV */
+nav {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center;
+  padding: 0 40px; gap: 0;
+  position: sticky; top: 0; z-index: 100;
+}
+.nav-brand {
+  font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700;
+  padding: 16px 0; margin-right: 32px; white-space: nowrap;
+}
+.nav-brand span { color: var(--accent); }
+.nav-tabs { display: flex; gap: 0; flex: 1; }
+.nav-tab {
+  padding: 16px 20px; font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase;
+  color: var(--text-dim); cursor: pointer; border-bottom: 2px solid transparent;
+  transition: color 0.15s, border-color 0.15s; white-space: nowrap;
+}
+.nav-tab:hover { color: var(--text); }
+.nav-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.nav-right {
+  margin-left: auto; display: flex; align-items: center; gap: 12px;
+}
+.nav-filename { font-size: 10px; color: var(--text-dim); }
+.nav-reset {
+  font-size: 10px; letter-spacing: 1px; text-transform: uppercase;
+  color: var(--text-dim); cursor: pointer; padding: 6px 10px;
+  border: 1px solid var(--border); border-radius: 3px;
+  background: none; font-family: 'DM Mono', monospace;
+  transition: color 0.15s, border-color 0.15s;
+}
+.nav-reset:hover { color: var(--accent); border-color: var(--accent); }
+
+/* PAGE CONTAINER */
+.page { display: none; padding: 32px 40px; }
+.page.active { display: block; }
+
+/* SELECTORS */
+.page-controls {
+  display: flex; align-items: center; gap: 16px;
+  margin-bottom: 28px; flex-wrap: wrap;
+}
+.control-group { display: flex; flex-direction: column; gap: 5px; }
+.control-label { font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--text-dim); }
+.control-select {
+  background: var(--surface); border: 1px solid var(--border); color: var(--text);
+  font-family: 'DM Mono', monospace; font-size: 12px;
+  padding: 7px 12px; border-radius: 3px; cursor: pointer; outline: none; min-width: 160px;
+}
+.control-select:focus { border-color: var(--accent); }
+
+/* SUMMARY STRIP */
+.summary-strip {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: 1px; background: var(--border);
+  border: 1px solid var(--border); border-radius: 4px;
+  overflow: hidden; margin-bottom: 24px;
+}
+.stat-card { background: var(--surface); padding: 16px 20px; display: flex; flex-direction: column; gap: 4px; }
+.stat-label { font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--text-dim); }
+.stat-value { font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 700; line-height: 1; }
+.stat-sub { font-size: 10px; color: var(--text-dim); }
+.col-over { color: var(--over); } .col-under { color: var(--under); } .col-exact { color: var(--exact); }
+
+/* DAY STRIP */
+.day-strip {
+  display: flex; gap: 1px; background: var(--border);
+  border: 1px solid var(--border); border-radius: 4px;
+  overflow: hidden; margin-bottom: 24px;
+}
+.day-cell {
+  flex: 1; background: var(--surface); padding: 14px;
+  cursor: pointer; transition: background 0.15s;
+  border-bottom: 3px solid transparent; min-width: 0;
+}
+.day-cell:hover { background: var(--surface2); }
+.day-cell.active { background: var(--bg); border-bottom-color: var(--accent); }
+.day-cell.missing { opacity: 0.38; cursor: default; }
+.day-name { font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-dim); margin-bottom: 6px; }
+.day-subj { font-family:'Syne',sans-serif; font-size:15px; font-weight:700; color:var(--over); line-height:1; }
+.day-obj  { font-family:'Syne',sans-serif; font-size:15px; font-weight:700; color:var(--under); line-height:1; }
+.day-label { font-size:9px; color:var(--text-dim); margin-top:2px; }
+.day-error { margin-top:6px; font-size:10px; padding:2px 5px; border-radius:2px; display:inline-block; }
+.day-error.over  { background:rgba(192,52,26,0.10); color:var(--over); }
+.day-error.under { background:rgba(26,82,160,0.10);  color:var(--under); }
+.day-error.exact { background:rgba(42,122,82,0.10);  color:var(--exact); }
+
+/* DETAIL PANEL */
+.detail-panel {
+  background: var(--bg); border: 1px solid var(--border); border-radius: 4px;
+  padding: 20px 24px; margin-bottom: 24px;
+  display: none;
+}
+.detail-inner { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 24px; }
+.detail-section h4 { font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--text-dim); margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border-light); }
+.ext-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.ext-name { font-size: 11px; color: var(--text-dim); min-width: 80px; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ext-bar-bg { flex:1; height:4px; background:var(--surface2); border-radius:2px; overflow:hidden; }
+.ext-bar-fill { height:100%; border-radius:2px; background: var(--purple); transition: width 0.4s; }
+.ext-val { font-size:10px; color:var(--text-dim); width:32px; text-align:right; }
+
+/* MAIN CHARTS GRID */
+.charts-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 1px; background: var(--border);
+  border: 1px solid var(--border); border-radius: 4px;
+  overflow: hidden; margin-bottom: 24px;
+}
+.dual-panel { display: flex; flex-direction: column; }
+.line-area { background: var(--surface); padding: 20px 20px 14px; }
+.error-area { background: var(--surface2); padding: 10px 20px 14px; }
+.chart-panel { background: var(--surface); padding: 20px; }
+
+.panel-title {
+  font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--text-dim);
+  margin-bottom: 12px; display: flex; align-items: center; gap: 8px;
+}
+.panel-title::after { content:''; flex:1; height:1px; background:var(--border-light); }
+.chart-wrap { position:relative; height:170px; }
+.chart-wrap-sm { position:relative; height:140px; }
+
+.legend { display:flex; gap:16px; align-items:center; margin-bottom:10px; flex-wrap:wrap; }
+.legend-item { display:flex; align-items:center; gap:5px; font-size:10px; color:var(--text-dim); }
+.legend-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+
+/* ERROR BARS */
+.error-bars { display:flex; align-items:stretch; gap:8px; height:90px; padding:0 4px; position:relative; }
+.error-zero-line { position:absolute; left:0; right:0; top:50%; height:1px; background:var(--border); }
+.error-bar-group { flex:1; display:flex; flex-direction:column; align-items:center; position:relative; }
+.bar-top-half { flex:1; width:100%; display:flex; flex-direction:column; justify-content:flex-end; align-items:center; padding-bottom:1px; }
+.bar-bottom-half { flex:1; width:100%; display:flex; flex-direction:column; justify-content:flex-start; align-items:center; padding-top:1px; }
+.bar-rect { width:60%; max-width:24px; border-radius:2px; min-height:2px; }
+.bar-pct { font-size:9px; font-family:'Syne',sans-serif; font-weight:600; margin:2px 0; white-space:nowrap; }
+.bar-day { font-size:8px; letter-spacing:1px; text-transform:uppercase; color:var(--text-dim); margin-top:2px; }
+.error-label { font-size:9px; letter-spacing:1.5px; text-transform:uppercase; color:var(--text-dim); margin-bottom:6px; display:flex; align-items:center; gap:6px; }
+.error-label::after { content:''; flex:1; height:1px; background:var(--border-light); }
+
+/* EXTENSION CHARTS */
+.ext-charts-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1px; background: var(--border);
+  border: 1px solid var(--border); border-radius: 4px;
+  overflow: hidden; margin-bottom: 24px;
+}
+
+/* OVERVIEW specific */
+.overview-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 1px; background: var(--border);
+  border: 1px solid var(--border); border-radius: 4px;
+  overflow: hidden; margin-bottom: 24px;
+}
+
+/* DEMOGRAPHIC */
+.demo-comparison {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 1px; background: var(--border);
+  border: 1px solid var(--border); border-radius: 4px;
+  overflow: hidden; margin-bottom: 24px;
+}
+
+/* AI PANEL */
+.ai-panel { background: var(--surface); border: 1px solid var(--border); border-radius: 4px; padding: 20px 24px; margin-bottom: 24px; }
+.ai-panel-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; gap:16px; }
+.ai-panel-title { font-size:9px; letter-spacing:2px; text-transform:uppercase; color:var(--text-dim); display:flex; align-items:center; gap:8px; flex:1; }
+.ai-panel-title::after { content:''; flex:1; height:1px; background:var(--border-light); }
+.ai-badge { font-size:9px; letter-spacing:1px; text-transform:uppercase; background:rgba(192,84,26,0.1); color:var(--accent); padding:3px 8px; border-radius:2px; border:1px solid rgba(192,84,26,0.2); flex-shrink:0; }
+.ai-btn { background:var(--accent); color:#fff; border:none; cursor:pointer; font-family:'DM Mono',monospace; font-size:10px; letter-spacing:1px; text-transform:uppercase; padding:7px 16px; border-radius:3px; transition:opacity 0.2s; flex-shrink:0; }
+.ai-btn:hover { opacity:0.85; } .ai-btn:disabled { opacity:0.4; cursor:default; }
+.ai-content { font-size:12px; line-height:1.8; color:var(--text); min-height:48px; }
+.ai-placeholder { color:var(--text-dim); font-style:italic; }
+.ai-loading { display:flex; align-items:center; gap:10px; color:var(--text-dim); font-size:12px; }
+.ai-spinner { width:12px; height:12px; border:2px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin 0.8s linear infinite; }
+.ai-error { color:var(--over); font-size:12px; font-style:italic; }
+@keyframes spin { to { transform:rotate(360deg); } }
+
+/* ── MODE TOGGLE ── */
+.mode-toggle {
+  display: flex; gap: 1px; background: var(--border);
+  border: 1px solid var(--border); border-radius: 4px; overflow: hidden;
+  width: 100%; max-width: 560px;
+}
+.mode-btn {
+  flex: 1; padding: 14px 16px; text-align: center; cursor: pointer;
+  background: var(--surface); transition: background 0.15s, color 0.15s;
+  border: none; font-family: 'DM Mono', monospace; color: var(--text);
+}
+.mode-btn:hover { background: var(--surface2); }
+.mode-btn.active { background: var(--accent); color: #fff; }
+.mode-btn h4 { font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; margin-bottom: 3px; }
+.mode-btn p { font-size: 10px; opacity: 0.7; line-height: 1.4; }
+.mode-btn.active p { opacity: 0.85; }
+
+
+/* ── PLAN SCREEN LAYOUT (left-right) ── */
+#planScreen {
+  min-height: 100vh;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  padding: 32px 40px;
+  gap: 20px;
+}
+.plan-layout {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 16px;
+  width: 100%;
+  max-width: 1100px;
+  align-items: start;
+}
+.plan-left { display: flex; flex-direction: column; gap: 16px; }
+.plan-right { position: sticky; top: 20px; display: flex; flex-direction: column; gap: 0; }
+
+/* Chat panel */
+.chat-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  height: 520px;
+}
+.chat-panel-title {
+  font-size: 9px; letter-spacing: 2px; text-transform: uppercase;
+  color: var(--text-dim); padding: 14px 16px 12px;
+  border-bottom: 1px solid var(--border-light);
+  display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+}
+.chat-panel-title .ai-badge { font-size:9px; }
+.chat-messages {
+  flex: 1; overflow-y: auto; padding: 14px 16px;
+  display: flex; flex-direction: column; gap: 10px;
+  scroll-behavior: smooth;
+}
+.chat-msg {
+  display: flex; gap: 8px; animation: fadeUp 0.25s ease both;
+}
+.chat-msg.user { flex-direction: row-reverse; }
+.chat-bubble {
+  max-width: 85%; padding: 9px 12px;
+  border-radius: 3px; font-size: 11px; line-height: 1.65;
+}
+.chat-msg.assistant .chat-bubble {
+  background: var(--surface2); color: var(--text);
+  border: 1px solid var(--border-light);
+}
+.chat-msg.user .chat-bubble {
+  background: var(--accent); color: #fff;
+}
+.chat-msg.assistant .chat-avatar {
+  width: 22px; height: 22px; border-radius: 50%;
+  background: var(--accent); color: #fff;
+  font-size: 10px; display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; margin-top: 2px; font-family: 'Syne', sans-serif; font-weight: 700;
+}
+.chat-thinking {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 11px; color: var(--text-dim); padding: 8px 0;
+}
+.chat-thinking-dots { display: flex; gap: 3px; }
+.chat-thinking-dots span {
+  width: 5px; height: 5px; border-radius: 50%; background: var(--text-dim);
+  animation: dotPulse 1.2s infinite ease-in-out;
+}
+.chat-thinking-dots span:nth-child(2) { animation-delay: 0.2s; }
+.chat-thinking-dots span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes dotPulse { 0%,80%,100% { opacity:0.2; transform:scale(0.8); } 40% { opacity:1; transform:scale(1); } }
+
+.chat-input-row {
+  display: flex; gap: 8px; padding: 10px 12px;
+  border-top: 1px solid var(--border-light); flex-shrink: 0;
+}
+.chat-input {
+  flex: 1; background: var(--bg); border: 1px solid var(--border);
+  color: var(--text); font-family: 'DM Mono', monospace; font-size: 11px;
+  padding: 8px 10px; border-radius: 3px; outline: none; resize: none; height: 36px;
+  line-height: 1.4; transition: border-color 0.15s;
+}
+.chat-input:focus { border-color: var(--accent); }
+.chat-send-btn {
+  background: var(--accent); color: #fff; border: none; cursor: pointer;
+  padding: 0 14px; border-radius: 3px; font-size: 14px;
+  transition: opacity 0.2s; flex-shrink: 0;
+}
+.chat-send-btn:hover { opacity: 0.85; }
+.chat-send-btn:disabled { opacity: 0.4; cursor: default; }
+
+@media (max-width: 900px) {
+  .plan-layout { grid-template-columns: 1fr; }
+  .plan-right { position: static; }
+  .chat-panel { height: 360px; }
+}
+
+
+/* mapping table */
+.mapping-table { width:100%; border-collapse:collapse; }
+.mapping-table th { font-size:9px; letter-spacing:1.5px; text-transform:uppercase; color:var(--text-dim); padding:0 8px 10px; text-align:left; font-weight:400; }
+.mapping-row { border-top:1px solid var(--border-light); }
+.mapping-row td { padding:9px 8px; vertical-align:middle; }
+.mapping-role { font-size:11px; color:var(--accent); font-weight:500; white-space:nowrap; min-width:150px; }
+.mapping-role-desc { font-size:10px; color:var(--text-dim); margin-top:1px; }
+.mapping-select {
+  background:var(--bg); border:1px solid var(--border); color:var(--text);
+  font-family:'DM Mono',monospace; font-size:11px; padding:5px 8px; border-radius:3px; outline:none; width:100%;
+}
+.mapping-select:focus { border-color:var(--accent); }
+.mapping-unit {
+  background:var(--bg); border:1px solid var(--border); color:var(--text);
+  font-family:'DM Mono',monospace; font-size:11px; padding:5px 8px; border-radius:3px; outline:none; margin-left:6px;
+}
+.conf-badge { font-size:9px; padding:2px 6px; border-radius:2px; white-space:nowrap; margin-left:6px; }
+.conf-high { background:rgba(42,122,82,0.12); color:var(--exact); }
+.conf-med  { background:rgba(160,112,32,0.12); color:var(--amber); }
+.conf-low  { background:rgba(192,52,26,0.12); color:var(--over); }
+
+/* variable classifier */
+.var-section { margin-top: 8px; }
+.var-section h5 { font-size:9px; letter-spacing:1.5px; text-transform:uppercase; color:var(--text-dim); margin-bottom:10px; }
+.var-classify-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; }
+.var-col-title {
+  font-size:10px; color:var(--text-dim); margin-bottom:6px;
+  display:flex; align-items:center; gap:6px;
+}
+.var-col-title-right { margin-left:auto; display:flex; gap:4px; }
+.var-col-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+.var-chips {
+  display:flex; flex-direction:column; gap:3px;
+  min-height:40px; max-height:220px; overflow-y:auto;
+  background:var(--bg); border:1px solid var(--border-light);
+  border-radius:3px; padding:4px;
+}
+.var-chip {
+  display:flex; align-items:center; gap:6px;
+  background:var(--surface2); border:1px solid var(--border);
+  padding:4px 8px; border-radius:2px; font-size:10px; cursor:pointer;
+  transition:background 0.1s, border-color 0.1s; user-select:none;
+}
+.var-chip:hover { background:var(--surface); border-color:var(--text-dim); }
+.var-chip.selected {
+  background:rgba(192,84,26,0.08); border-color:var(--accent);
+  color:var(--accent);
+}
+.var-chip-check {
+  width:11px; height:11px; border:1px solid var(--border);
+  border-radius:2px; flex-shrink:0; display:flex; align-items:center; justify-content:center;
+  font-size:8px; transition:background 0.1s, border-color 0.1s;
+}
+.var-chip.selected .var-chip-check { background:var(--accent); border-color:var(--accent); color:#fff; }
+.var-col-move-bar {
+  display:flex; gap:4px; margin-top:6px; flex-wrap:wrap;
+}
+.var-move-btn {
+  font-size:9px; letter-spacing:0.5px; text-transform:uppercase;
+  padding:4px 8px; border-radius:2px; border:1px solid var(--border);
+  background:var(--surface); color:var(--text-dim); cursor:pointer;
+  font-family:'DM Mono',monospace; transition:all 0.12s; white-space:nowrap;
+}
+.var-move-btn:hover { border-color:var(--accent); color:var(--accent); }
+.var-move-btn:disabled { opacity:0.35; cursor:default; pointer-events:none; }
+.var-col-select-row {
+  display:flex; align-items:center; gap:6px; margin-bottom:4px;
+}
+.var-select-all-btn {
+  font-size:9px; color:var(--text-dim); background:none; border:none;
+  cursor:pointer; font-family:'DM Mono',monospace; padding:0; text-decoration:underline;
+  text-underline-offset:2px;
+}
+.var-select-all-btn:hover { color:var(--accent); }
+.var-col-count { font-size:9px; color:var(--text-dim); margin-left:auto; }
+
+/* incompatible */
+.plan-incompatible {
+  width:100%; max-width:760px; display:none;
+  background:rgba(192,52,26,0.06); border:1px solid rgba(192,52,26,0.2); border-radius:4px; padding:24px 28px;
+}
+.plan-incompatible h3 { font-family:'Syne',sans-serif; font-size:16px; font-weight:700; color:var(--over); margin-bottom:8px; }
+.plan-incompatible p { font-size:12px; color:var(--text-dim); line-height:1.7; }
+.plan-incompatible ul { margin:8px 0 0 16px; font-size:12px; color:var(--text-dim); line-height:1.9; }
+
+/* plan actions */
+.plan-actions { display:flex; gap:10px; justify-content:flex-end; margin-top:20px; flex-wrap:wrap; }
+.btn-primary { background:var(--accent); color:#fff; border:none; cursor:pointer; font-family:'DM Mono',monospace; font-size:11px; letter-spacing:1px; text-transform:uppercase; padding:10px 24px; border-radius:3px; transition:opacity 0.2s; }
+.btn-primary:hover { opacity:0.85; } .btn-primary:disabled { opacity:0.4; cursor:default; }
+.btn-secondary { background:none; color:var(--text-dim); border:1px solid var(--border); cursor:pointer; font-family:'DM Mono',monospace; font-size:11px; letter-spacing:1px; text-transform:uppercase; padding:10px 18px; border-radius:3px; transition:color 0.15s,border-color 0.15s; }
+.btn-secondary:hover { color:var(--text); border-color:var(--text-dim); }
+
+
+/* ── DATA PREVIEW ── */
+.preview-panel {
+  width: 100%; display: none;
+}
+.preview-table-wrap {
+  overflow-x: auto; max-height: 420px; overflow-y: auto;
+  border: 1px solid var(--border); border-radius: 3px;
+  background: var(--surface);
+}
+.preview-table {
+  width: 100%; border-collapse: collapse; font-size: 11px;
+  white-space: nowrap;
+}
+.preview-table th {
+  position: sticky; top: 0; background: var(--surface2);
+  padding: 8px 12px; text-align: left; font-weight: 500;
+  border-bottom: 1px solid var(--border); font-size: 9px;
+  letter-spacing: 1px; text-transform: uppercase; color: var(--text-dim);
+  z-index: 1;
+}
+.preview-table th.core-col { color: var(--accent); background: rgba(192,84,26,0.06); }
+.preview-table td {
+  padding: 6px 12px; border-bottom: 1px solid var(--border-light);
+  color: var(--text); max-width: 180px; overflow: hidden;
+  text-overflow: ellipsis;
+}
+.preview-table tr:last-child td { border-bottom: none; }
+.preview-table tr:hover td { background: var(--surface2); }
+.preview-table td.core-col { color: var(--accent); font-weight: 500; }
+.preview-table td.null-val { color: var(--text-dim); font-style: italic; }
+.preview-meta {
+  font-size: 10px; color: var(--text-dim); margin-top: 8px;
+  display: flex; gap: 16px; flex-wrap: wrap; align-items: center;
+}
+.preview-meta span { display: flex; align-items: center; gap: 4px; }
+.preview-dot { width: 7px; height: 7px; border-radius: 50%; }
+
+/* ── BACK BUTTON in nav ── */
+.nav-back {
+  font-size: 10px; letter-spacing: 1px; text-transform: uppercase;
+  color: var(--text-dim); cursor: pointer; padding: 6px 10px;
+  border: 1px solid var(--border); border-radius: 3px;
+  background: none; font-family: 'DM Mono', monospace;
+  transition: color 0.15s, border-color 0.15s; display: none;
+}
+.nav-back:hover { color: var(--accent); border-color: var(--accent); }
+
+/* PICKUP NOTE */
+.pickup-note { font-size:10px; color:var(--text-dim); margin-bottom:8px; padding:5px 8px; background:var(--surface2); border-radius:2px; border-left:2px solid var(--border); font-style:italic; }
+
+/* NO DATA */
+.no-data { display:flex; align-items:center; justify-content:center; height:100px; color:var(--text-dim); font-size:11px; font-style:italic; }
+.page-empty { text-align:center; padding:80px 40px; color:var(--text-dim); }
+.page-empty h3 { font-family:'Syne',sans-serif; font-size:18px; font-weight:700; margin-bottom:8px; color:var(--text); }
+
+@keyframes fadeUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+.fade-up { animation: fadeUp 0.35s ease both; }
+
+@media (max-width:900px) {
+  .summary-strip { grid-template-columns:repeat(2,1fr); }
+  .charts-grid, .overview-grid, .demo-comparison { grid-template-columns:1fr; }
+  nav { padding:0 20px; } .page { padding:20px; }
+}
+
+/* ══ MISSING VALUE SCREEN ══ */
+.mv-radio-label {
+  display:flex; align-items:flex-start; gap:10px; cursor:pointer;
+  font-size:11px; line-height:1.5;
+}
+.mv-radio-label input[type=radio] { margin-top:2px; accent-color:var(--accent); flex-shrink:0; }
+.mv-mode-label {
+  padding:10px 12px; border:1px solid var(--border); border-radius:3px;
+  background:var(--bg); transition:border-color 0.12s, background 0.12s;
+}
+.mv-mode-label:has(input:checked) { border-color:var(--accent); background:rgba(192,84,26,0.04); }
+.mv-criteria-row {
+  display:flex; align-items:center; gap:12px;
+  padding:10px 12px; border:1px solid var(--border); border-radius:3px;
+  background:var(--bg); transition:border-color 0.12s, opacity 0.12s;
+}
+.mv-criteria-row.inactive { opacity:0.45; }
+.mv-criteria-row.active { border-color:var(--accent); background:rgba(192,84,26,0.04); }
+.mv-criteria-label { flex:1; font-size:11px; }
+.mv-criteria-label strong { display:block; margin-bottom:2px; }
+.mv-criteria-label span { font-size:10px; color:var(--text-dim); }
+.mv-threshold-wrap { display:flex; align-items:center; gap:8px; flex-shrink:0; }
+.mv-threshold-wrap input[type=range] { width:90px; accent-color:var(--accent); cursor:pointer; }
+.mv-threshold-val {
+  font-size:11px; font-weight:500; min-width:60px; text-align:center;
+  padding:3px 8px; background:var(--surface2); border:1px solid var(--border); border-radius:2px;
+}
+/* Heatmap */
+.mv-heatmap-table { border-collapse:collapse; font-size:9px; }
+.mv-heatmap-table th {
+  padding:4px 8px; color:var(--text-dim); font-weight:400; text-align:left;
+  border-bottom:1px solid var(--border); white-space:nowrap;
+}
+.mv-heatmap-table th.var-header { text-align:center; max-width:90px; min-width:80px; white-space:normal; word-break:break-word; line-height:1.4; padding:4px 6px; }
+.mv-heatmap-table td { padding:3px 6px; text-align:center; border-bottom:1px solid var(--border-light); }
+.mv-heatmap-table td.pid-cell { text-align:left; color:var(--text-dim); white-space:nowrap; padding-right:10px; }
+.mv-heatmap-cell {
+  display:inline-block; width:72px; height:22px; border-radius:2px;
+  font-size:9px; line-height:22px; text-align:center; font-weight:500;
+}
+.mv-stat-card {
+  padding:10px 12px; background:var(--bg); border:1px solid var(--border); border-radius:3px;
+}
+.mv-stat-card .mv-stat-val { font-size:20px; font-weight:700; font-family:'Syne',sans-serif; }
+.mv-stat-card .mv-stat-label { font-size:9px; color:var(--text-dim); letter-spacing:0.5px; text-transform:uppercase; margin-top:2px; }
+.mv-stat-card.highlight .mv-stat-val { color:var(--over); }
+
+</style>
+</head>
+<body>
+
+<!-- ══ UPLOAD SCREEN ══ -->
+<div id="uploadScreen">
+  <div class="upload-header">
+    <h1>Perception <span>vs</span> Reality</h1>
+    <p>Upload a CSV or JSON file to generate an interactive dashboard comparing self-reported and objective social media use data.</p>
+  </div>
+
+  <!-- Mode toggle -->
+  <div class="mode-toggle">
+    <button class="mode-btn active" id="modeStandardBtn" onclick="setMode('standard')">
+      <h4>Standard Mode</h4>
+      <p>Use required column names. Fast and reliable.</p>
+    </button>
+    <button class="mode-btn" id="modeFlexBtn" onclick="setMode('flexible')">
+      <h4>Flexible Mode</h4>
+      <p>Any column names. AI maps and transforms your data.</p>
+    </button>
+  </div>
+
+  <!-- Drop zone (shown when no files yet) -->
+  <div class="upload-box" id="uploadBox">
+    <input type="file" id="fileInput" accept=".csv,.json">
+    <div class="upload-icon">📂</div>
+    <h3>Drop your file here</h3>
+    <p>CSV or JSON</p>
+    <div class="btn-upload">Choose file</div>
+  </div>
+
+  <!-- File list (shown after files added) -->
+  <div class="file-list" id="fileList" style="display:none"></div>
+  <!-- multi-file disabled: single file only -->
+  <button class="upload-proceed-btn" id="proceedBtn" style="display:none" onclick="proceedWithFiles()">
+    Analyse & Continue →
+  </button>
+
+  <div class="upload-error" id="uploadError"></div>
+
+  <!-- Standard spec box -->
+  <div id="standardSpecBox" class="spec-box">
+    <h4>CSV Format Specification</h4>
+    <div class="spec-section">
+      <div class="spec-label">Required columns</div>
+      <div class="spec-cols">
+        <span class="spec-tag required">participant_id</span>
+        <span class="spec-tag required">day</span>
+        <span class="spec-tag required">subjective_time</span>
+        <span class="spec-tag required">objective_time</span>
+        <span class="spec-tag required">subjective_pickups</span>
+        <span class="spec-tag required">objective_pickups</span>
+      </div>
+      <div class="spec-note">Time values in minutes (numeric). Day accepts strings (monday), numbers (1,2,3), or dates (2024-01-15).</div>
+    </div>
+    <div class="spec-section">
+      <div class="spec-label">Demographic columns (optional — auto-detected)</div>
+      <div class="spec-cols">
+        <span class="spec-tag">gender</span>
+        <span class="spec-tag">age</span>
+        <span class="spec-tag">ethnicity</span>
+        <span class="spec-tag">education</span>
+        <span class="spec-tag">income</span>
+        <span class="spec-tag">occupation</span>
+        <span class="spec-tag">country</span>
+        <span class="spec-tag">language</span>
+        <span class="spec-tag">marital_status</span>
+      </div>
+    </div>
+    <div class="spec-section">
+      <div class="spec-label">Extension columns (optional)</div>
+      <div class="spec-note">Any additional numeric columns are auto-detected and visualized as trend charts.</div>
+    </div>
+  </div>
+
+  <!-- Flexible spec box -->
+  <div id="flexSpecBox" class="spec-box" style="display:none">
+    <h4>Flexible Mode</h4>
+    <div class="spec-section">
+      <div class="spec-label">What you need</div>
+      <div class="spec-note" style="font-style:normal;line-height:1.8">
+        Your CSV can use <strong>any column names</strong>. After uploading, Claude will analyze your data structure and propose a mapping. You review and confirm before the dashboard generates.<br><br>
+        The only requirement is that your dataset contains <strong>both self-reported and objective measures</strong> (e.g. estimated vs actual screen time), a <strong>participant identifier</strong>, and a <strong>time/day variable</strong>.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ PLAN SCREEN ══ -->
+<div id="planScreen">
+  <div class="plan-header" style="text-align:center;max-width:900px">
+    <h2 id="planTitle" style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;margin-bottom:6px">Review Data Mapping</h2>
+    <p id="planSubtitle" style="font-size:12px;color:var(--text-dim);line-height:1.7">Claude has analyzed your files. Review the proposed mapping on the left and use the chat to make corrections.</p>
+  </div>
+
+  <!-- Analyzing (full-width, shown before layout appears) -->
+  <div style="width:100%;max-width:760px" id="planAnalyzingWrap">
+    <div class="plan-box" id="planAnalyzing" style="display:none">
+      <div style="display:flex;align-items:center;gap:12px;color:var(--text-dim);font-size:12px;padding:8px 0">
+        <div class="plan-spinner"></div>
+        <span id="planAnalyzingMsg">Analyzing your dataset structure…</span>
+      </div>
+    </div>
+    <!-- Incompatible (full-width) -->
+    <div class="plan-incompatible" id="planIncompatible">
+      <h3>Dataset not compatible</h3>
+      <p id="planIncompatibleMsg">Your dataset does not appear to contain the required structure for this platform.</p>
+      <ul>
+        <li>A participant identifier column</li>
+        <li>A time or day column</li>
+        <li>At least one self-reported measure</li>
+        <li>At least one corresponding objective measure</li>
+      </ul>
+      <div class="plan-actions"><button class="btn-secondary" onclick="backToUpload()">← Try another file</button></div>
+    </div>
+  </div>
+
+  <!-- Left-right layout (shown after analysis) -->
+  <div class="plan-layout" id="planLayout" style="display:none">
+
+    <!-- LEFT: structured proposal -->
+    <div class="plan-left">
+
+      <!-- Merge plan (multi-file only) -->
+      <div class="merge-plan-box plan-box" id="mergePlanBox" style="display:none">
+        <div class="plan-box-title">File Merge Plan</div>
+        <div class="file-summary-grid" id="fileSummaryGrid"></div>
+        <div class="join-config" id="joinConfig"></div>
+        <div class="plan-actions" style="margin-top:16px">
+          <button class="btn-secondary" onclick="backToUpload()">← Back</button>
+          <button class="btn-primary" onclick="confirmMerge()">Confirm Merge & Continue →</button>
+        </div>
+      </div>
+
+      <!-- Column mapping -->
+      <div class="plan-box" id="planMappingBox" style="display:none">
+        <div class="plan-box-title">Core Variable Mapping</div>
+        <table class="mapping-table">
+          <thead>
+            <tr>
+              <th>Role</th>
+              <th>Your column</th>
+              <th>Unit</th>
+              <th>Confidence</th>
+            </tr>
+          </thead>
+          <tbody id="mappingTableBody"></tbody>
+        </table>
+        <div style="font-size:10px;color:var(--text-dim);margin-top:10px;font-style:italic;line-height:1.6">
+          All time values will be converted to <strong style="font-style:normal">minutes</strong> when the dashboard is generated. If your subjective and objective columns use different units, select the correct unit for each row above and the conversion will be handled automatically.
+        </div>
+      </div>
+
+        <div class="plan-box" id="planTransformsBox" style="display:none;margin-top:1px">
+          <div class="plan-box-title">Data Transforms</div>
+          <div class="transforms-panel" id="transformsList">
+            <div class="transform-none">No transforms applied yet. Use the chat to request variable merging, recoding, reverse scoring, or row filtering.</div>
+          </div>
+        </div>
+
+      <!-- Other columns -->
+      <div class="plan-box" id="planVarBox" style="display:none">
+        <div class="plan-box-title">Other Columns</div>
+        <div class="var-classify-grid">
+
+          <!-- DEMOGRAPHIC -->
+          <div>
+            <div class="var-col-title">
+              <div class="var-col-dot" style="background:var(--purple)"></div>Demographic
+              <span class="var-col-count" id="demoCount"></span>
+            </div>
+            <div class="var-col-select-row">
+              <button class="var-select-all-btn" onclick="selectAllInCol('demo')">Select all</button>
+              <button class="var-select-all-btn" onclick="clearSelectionInCol('demo')">Clear</button>
+            </div>
+            <div class="var-chips" id="demoChips"></div>
+            <div class="var-col-move-bar">
+              <button class="var-move-btn" onclick="moveSelected('demo','ext')">→ Extension</button>
+              <button class="var-move-btn" onclick="moveSelected('demo','ignored')">→ Ignore</button>
+            </div>
+          </div>
+
+          <!-- EXTENSION -->
+          <div>
+            <div class="var-col-title">
+              <div class="var-col-dot" style="background:var(--amber)"></div>Extension
+              <span class="var-col-count" id="extCount"></span>
+            </div>
+            <div class="var-col-select-row">
+              <button class="var-select-all-btn" onclick="selectAllInCol('ext')">Select all</button>
+              <button class="var-select-all-btn" onclick="clearSelectionInCol('ext')">Clear</button>
+            </div>
+            <div class="var-chips" id="extChips"></div>
+            <div class="var-col-move-bar">
+              <button class="var-move-btn" onclick="moveSelected('ext','demo')">→ Demographic</button>
+              <button class="var-move-btn" onclick="moveSelected('ext','ignored')">→ Ignore</button>
+            </div>
+          </div>
+
+          <!-- IGNORED -->
+          <div>
+            <div class="var-col-title">
+              <div class="var-col-dot" style="background:var(--border)"></div>Ignored
+              <span class="var-col-count" id="ignoredCount"></span>
+            </div>
+            <div class="var-col-select-row">
+              <button class="var-select-all-btn" onclick="selectAllInCol('ignored')">Select all</button>
+              <button class="var-select-all-btn" onclick="clearSelectionInCol('ignored')">Clear</button>
+            </div>
+            <div class="var-chips" id="ignoredChips"></div>
+            <div class="var-col-move-bar">
+              <button class="var-move-btn" onclick="moveSelected('ignored','demo')">→ Demographic</button>
+              <button class="var-move-btn" onclick="moveSelected('ignored','ext')">→ Extension</button>
+            </div>
+          </div>
+
+        </div>
+        <div style="font-size:10px;color:var(--text-dim);margin-top:10px;font-style:italic">Click chips to select, then use the move buttons below each column. Shift+click to range-select.</div>
+      </div>
+
+      <!-- Action buttons -->
+      <!-- Preview panel -->
+      <div class="preview-panel plan-box" id="previewPanel">
+        <div class="plan-box-title">Data Preview <span style="font-size:9px;color:var(--text-dim);font-style:italic;letter-spacing:0;text-transform:none">— first 20 rows after transforms</span></div>
+        <div class="preview-table-wrap">
+          <table class="preview-table" id="previewTable"></table>
+        </div>
+        <div class="preview-meta" id="previewMeta"></div>
+      </div>
+
+      <!-- Action buttons -->
+      <div id="planActions" class="plan-actions" style="display:none">
+        <button class="btn-secondary" onclick="backToUpload()">← Try another file</button>
+        <button class="btn-secondary" id="previewBtn" onclick="refreshPreview()">👁 Preview Data</button>
+        <button class="btn-primary" id="planConfirmBtn" onclick="confirmMapping()">Confirm & Next Step →</button>
+      </div>
+    </div>
+
+    <!-- RIGHT: chat -->
+    <div class="plan-right">
+      <div class="chat-panel">
+        <div class="chat-panel-title">
+          Ask Claude to adjust
+          <span class="ai-badge">AI</span>
+        </div>
+        <div class="chat-messages" id="chatMessages"></div>
+        <div class="chat-input-row">
+          <textarea class="chat-input" id="chatInput" placeholder="e.g. file2 and file1 should join on date…" rows="1"
+            onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChatMessage()}"
+            oninput="this.style.height='36px';this.style.height=Math.min(this.scrollHeight,96)+'px'"></textarea>
+          <button class="chat-send-btn" id="chatSendBtn" onclick="sendChatMessage()">↑</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ══ MISSING VALUE SCREEN ══ -->
+<div id="missingScreen" style="display:none; min-height:100vh; flex-direction:column; align-items:center; padding:32px 40px; gap:20px;">
+  <div style="width:100%; max-width:1100px;">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
+      <div>
+        <div style="font-size:10px;color:var(--text-dim);letter-spacing:1px;text-transform:uppercase;margin-bottom:4px">Step 3 of 3</div>
+        <h2 style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;letter-spacing:-0.3px">Missing Value Handling</h2>
+        <p style="font-size:11px;color:var(--text-dim);margin-top:4px;line-height:1.7">Review data completeness and define exclusion criteria before generating the dashboard.</p>
+      </div>
+      <div style="display:flex;gap:10px;">
+        <button class="btn-secondary" onclick="backFromMissing()">← Back to Preview</button>
+        <button class="btn-primary" id="missingConfirmBtn" onclick="confirmMissing()">Generate Dashboard →</button>
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:1fr 320px; gap:16px; align-items:start;">
+
+      <!-- LEFT COLUMN -->
+      <div style="display:flex;flex-direction:column;gap:14px;">
+
+        <!-- HEATMAP -->
+        <div class="plan-box">
+          <div class="plan-box-title">Participant × Variable Completeness</div>
+          <div style="font-size:10px;color:var(--text-dim);margin-bottom:10px;">Each cell shows how many days of valid (non-null) data exist for that participant and variable. Darker = more complete.</div>
+          <div style="overflow-x:auto;">
+            <div id="missingHeatmap" style="font-size:9px;"></div>
+          </div>
+        </div>
+
+        <!-- THRESHOLD SETTINGS -->
+        <div class="plan-box">
+          <div class="plan-box-title">Exclusion Criteria</div>
+          <div style="font-size:10px;color:var(--text-dim);margin-bottom:14px;">Select one or more variables. A participant is excluded if they fall below the threshold on the selected variable(s).</div>
+
+          <!-- Variable checkboxes + thresholds -->
+          <div id="missingCriteriaRows" style="display:flex;flex-direction:column;gap:10px;"></div>
+
+          <!-- AND / OR logic -->
+          <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);display:flex;align-items:center;gap:16px;">
+            <span style="font-size:10px;color:var(--text-dim);letter-spacing:0.5px;text-transform:uppercase;">Combination logic</span>
+            <label class="mv-radio-label">
+              <input type="radio" name="mvLogic" value="and" checked onchange="updateMissingPreview()">
+              <span>AND <span style="color:var(--text-dim)">(exclude if fails ANY selected criterion)</span></span>
+            </label>
+            <label class="mv-radio-label">
+              <input type="radio" name="mvLogic" value="or" onchange="updateMissingPreview()">
+              <span>OR <span style="color:var(--text-dim)">(exclude only if fails ALL selected criteria)</span></span>
+            </label>
+          </div>
+        </div>
+
+        <!-- HANDLING MODE -->
+        <div class="plan-box">
+          <div class="plan-box-title">Treatment of Excluded Participants</div>
+          <div style="display:flex;flex-direction:column;gap:10px;margin-top:4px;">
+            <label class="mv-radio-label mv-mode-label" id="mvModeRemoveLabel">
+              <input type="radio" name="mvMode" value="remove" checked onchange="updateMissingPreview()">
+              <div>
+                <div style="font-weight:500;">Remove</div>
+                <div style="font-size:10px;color:var(--text-dim);margin-top:2px;">Excluded participants are permanently removed. Dashboard shows one clean dataset.</div>
+              </div>
+            </label>
+            <label class="mv-radio-label mv-mode-label" id="mvModeSplitLabel">
+              <input type="radio" name="mvMode" value="split" onchange="updateMissingPreview()">
+              <div>
+                <div style="font-weight:500;">Split view</div>
+                <div style="font-size:10px;color:var(--text-dim);margin-top:2px;">Dashboard shows both versions. Toggle between Full dataset and Selected cases only to compare.</div>
+              </div>
+            </label>
+            <label class="mv-radio-label mv-mode-label" id="mvModeNoneLabel">
+              <input type="radio" name="mvMode" value="none" onchange="updateMissingPreview()">
+              <div>
+                <div style="font-weight:500;">No exclusion</div>
+                <div style="font-size:10px;color:var(--text-dim);margin-top:2px;">Include all participants regardless of missingness. Criteria above are ignored.</div>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <!-- DECISION SUMMARY -->
+        <div class="plan-box" id="mvSummaryBox">
+          <div class="plan-box-title">Decision Summary <span style="font-size:9px;color:var(--text-dim);font-style:italic;text-transform:none;letter-spacing:0">— copy for Methods section</span></div>
+          <div id="mvSummaryText" style="font-size:11px;line-height:1.9;color:var(--text);padding:10px 12px;background:var(--bg);border:1px solid var(--border);border-radius:3px;font-style:italic;"></div>
+          <button onclick="copyMvSummary()" style="margin-top:8px;font-size:9px;letter-spacing:0.5px;text-transform:uppercase;padding:5px 10px;border:1px solid var(--border);background:var(--surface);color:var(--text-dim);cursor:pointer;border-radius:2px;font-family:'DM Mono',monospace;" onmouseenter="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseleave="this.style.borderColor='var(--border)';this.style.color='var(--text-dim)'">Copy text</button>
+        </div>
+
+      </div>
+
+      <!-- RIGHT COLUMN: live preview -->
+      <div style="position:sticky;top:20px;display:flex;flex-direction:column;gap:14px;">
+        <div class="plan-box">
+          <div class="plan-box-title">Live Preview</div>
+          <div id="mvPreviewStats" style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px;"></div>
+
+          <div style="font-size:10px;color:var(--text-dim);letter-spacing:0.5px;text-transform:uppercase;margin-bottom:6px;">Excluded participants</div>
+          <div id="mvExcludedList" style="font-size:10px;line-height:1.9;color:var(--over);max-height:280px;overflow-y:auto;"></div>
+          <div id="mvExcludedEmpty" style="font-size:10px;color:var(--text-dim);font-style:italic;display:none;">No participants excluded under current criteria.</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ══ DASHBOARD ══ -->
+<div id="dashboard">
+  <nav>
+    <div class="nav-brand">Perception <span>vs</span> Reality</div>
+    <div class="nav-tabs">
+      <div class="nav-tab active" onclick="switchPage('overview')">Overview</div>
+      <div class="nav-tab" onclick="switchPage('individual')">Individual</div>
+      <div class="nav-tab" id="demoTab" onclick="switchPage('demographic')" style="display:none">Demographic</div>
+    </div>
+    <div class="nav-right">
+      <span class="nav-filename" id="navFilename"></span>
+      <button class="nav-back" id="navBackBtn" onclick="backToMapping()">← Back to mapping</button>
+      <div id="splitToggleWrap" style="display:none;align-items:center;gap:0;">
+        <button id="splitBtnFull" onclick="switchSplitView('full')"
+          style="font-size:9px;letter-spacing:0.5px;text-transform:uppercase;padding:5px 10px;border:1px solid var(--accent);background:var(--accent);color:#fff;cursor:pointer;border-radius:2px 0 0 2px;font-family:'DM Mono',monospace;">
+          Full dataset
+        </button>
+        <button id="splitBtnClean" onclick="switchSplitView('clean')"
+          style="font-size:9px;letter-spacing:0.5px;text-transform:uppercase;padding:5px 10px;border:1px solid var(--border);background:var(--surface);color:var(--text-dim);cursor:pointer;border-radius:0 2px 2px 0;font-family:'DM Mono',monospace;">
+          Selected cases
+        </button>
+      </div>
+      <button class="nav-reset" onclick="resetDashboard()">↩ New file</button>
+    </div>
+  </nav>
+
+  <!-- ── OVERVIEW PAGE ── -->
+  <div class="page active" id="page-overview">
+    <div class="summary-strip" id="ovSummary" style="grid-template-columns:repeat(5,1fr)"></div>
+    <div class="overview-grid" id="ovCharts"></div>
+    <div id="ovExtCharts"></div>
+    <div class="ai-panel">
+      <div class="ai-panel-header">
+        <div class="ai-panel-title">Claude Interpretation <span class="ai-badge">AI · auto-generated</span></div>
+        <button class="ai-btn" id="ovAiBtn" onclick="generateAI('overview')">Generate</button>
+      </div>
+      <div class="ai-content" id="ovAiContent"><span class="ai-placeholder">Click Generate for an AI interpretation of the overall dataset patterns.</span></div>
+    </div>
+  </div>
+
+  <!-- ── INDIVIDUAL PAGE ── -->
+  <div class="page" id="page-individual">
+    <div class="page-controls">
+      <div class="control-group">
+        <div class="control-label">Participant</div>
+        <select class="control-select" id="ppSelect" onchange="renderIndividual()"></select>
+      </div>
+    </div>
+    <div class="summary-strip" id="indSummary"></div>
+    <div class="day-strip" id="indDayStrip"></div>
+    <div class="detail-panel" id="indDetailPanel">
+      <div class="detail-inner" id="indDetailInner"></div>
+    </div>
+    <div class="charts-grid" id="indCharts"></div>
+    <div id="indExtCharts"></div>
+    <div class="ai-panel">
+      <div class="ai-panel-header">
+        <div class="ai-panel-title">Claude Interpretation <span class="ai-badge">AI · auto-generated</span></div>
+        <button class="ai-btn" id="indAiBtn" onclick="generateAI('individual')">Generate</button>
+      </div>
+      <div class="ai-content" id="indAiContent"><span class="ai-placeholder">Select a participant and click Generate to get an AI interpretation of their bias patterns.</span></div>
+    </div>
+  </div>
+
+  <!-- ── DEMOGRAPHIC PAGE ── -->
+  <div class="page" id="page-demographic">
+    <div class="page-controls">
+      <div class="control-group">
+        <div class="control-label">Group by</div>
+        <select class="control-select" id="demoVarSelect" onchange="renderDemographic()"></select>
+      </div>
+    </div>
+    <div id="demoContent"></div>
+    <div class="ai-panel">
+      <div class="ai-panel-header">
+        <div class="ai-panel-title">Claude Interpretation <span class="ai-badge">AI · auto-generated</span></div>
+        <button class="ai-btn" id="demoAiBtn" onclick="generateAI('demographic')">Generate</button>
+      </div>
+      <div class="ai-content" id="demoAiContent"><span class="ai-placeholder">Click Generate for an AI interpretation of group differences.</span></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════
+// MULTI-FILE + FLEXIBLE MODE STATE
+// ══════════════════════════════════
+let currentMode = 'standard';
+let uploadedFiles = [];        // [{name, size, type, rows, fields}]
+let mergedRows = [];           // after merge
+let mergedFields = [];
+let flexMapping = {};
+let flexVarCategories = {};
+let flexUnitMap = {};
+let mergePlan = null;          // Claude's merge proposal
+let conversationHistory = [];  // multi-turn chat history
+let currentPlanJSON = null;    // latest full plan JSON from Claude
+let allFieldsForChat = [];     // column names available for remapping
+let flexTransforms = [];       // [{role, type, expression, columns, description}]
+let isFlexibleMode = false;    // true when entered via flexible mode
+
+// ── File type helpers ──
+function parseJSON(text) {
+  const data = JSON.parse(text);
+  if (Array.isArray(data)) return data;
+  // Try common wrappers
+  const key = Object.keys(data).find(k => Array.isArray(data[k]));
+  if (key) return data[key];
+  throw new Error('JSON must be an array of objects or an object containing one.');
+}
+
+function fileIcon(name) {
+  return name.endsWith('.json') ? '{ }' : '🗂';
+}
+
+function fmtSize(bytes) {
+  return bytes < 1024 ? bytes + ' B' : bytes < 1048576 ? (bytes/1024).toFixed(1) + ' KB' : (bytes/1048576).toFixed(1) + ' MB';
+}
+
+// ── Mode toggle ──
+function setMode(mode) {
+  currentMode = mode;
+  document.getElementById('modeStandardBtn').classList.toggle('active', mode === 'standard');
+  document.getElementById('modeFlexBtn').classList.toggle('active', mode === 'flexible');
+  document.getElementById('standardSpecBox').style.display = mode === 'standard' ? '' : 'none';
+  document.getElementById('flexSpecBox').style.display = mode === 'flexible' ? '' : 'none';
+  document.getElementById('uploadError').style.display = 'none';
+  // Update accept attr
+  document.getElementById('fileInput').accept = mode === 'standard' ? '.csv' : '.csv,.json';
+}
+
+// ── File intake ──
+const uploadBox = document.getElementById('uploadBox');
+const fileInput = document.getElementById('fileInput');
+
+uploadBox.addEventListener('dragover', e => { e.preventDefault(); uploadBox.classList.add('drag-over'); });
+uploadBox.addEventListener('dragleave', () => uploadBox.classList.remove('drag-over'));
+uploadBox.addEventListener('drop', e => {
+  e.preventDefault(); uploadBox.classList.remove('drag-over');
+  handleNewFiles(e.dataTransfer.files);
+});
+fileInput.addEventListener('change', e => { if (e.target.files.length) handleNewFiles(e.target.files); });
+
+function addMoreFiles(files) { handleNewFiles(files); }
+
+async function handleNewFiles(fileList) {
+  document.getElementById('uploadError').style.display = 'none';
+  const arr = Array.from(fileList);
+  for (const file of arr) {
+    if (uploadedFiles.find(f => f.name === file.name)) continue; // dedupe
+    try {
+      const text = await file.text();
+      let rows, fields;
+      if (file.name.endsWith('.json')) {
+        rows = parseJSON(text);
+        fields = rows.length ? Object.keys(rows[0]) : [];
+      } else {
+        const result = Papa.parse(text, { header: true, skipEmptyLines: true, dynamicTyping: true });
+        rows = result.data; fields = result.meta.fields;
+      }
+      uploadedFiles.push({ name: file.name, size: file.size, rows, fields });
+    } catch(e) {
+      showError('Could not parse ' + file.name + ': ' + e.message);
+      return;
+    }
+  }
+  renderFileList();
+}
+
+function removeFile(idx) {
+  uploadedFiles.splice(idx, 1);
+  renderFileList();
+}
+
+function renderFileList() {
+  const box = document.getElementById('uploadBox');
+  const list = document.getElementById('fileList');
+  const addBtn = document.getElementById('addMoreBtn'); // may be null (disabled)
+  const proceedBtn = document.getElementById('proceedBtn');
+
+  if (uploadedFiles.length === 0) {
+    box.style.display = '';
+    if (list) list.style.display = 'none';
+    if (addBtn) addBtn.style.display = 'none';
+    if (proceedBtn) proceedBtn.style.display = 'none';
+    return;
+  }
+
+  box.style.display = 'none';
+  if (list) list.style.display = 'flex';
+  if (addBtn) addBtn.style.display = '';
+  if (proceedBtn) proceedBtn.style.display = '';
+
+  list.innerHTML = uploadedFiles.map((f, i) => `
+    <div class="file-item">
+      <span class="file-item-icon">${fileIcon(f.name)}</span>
+      <span class="file-item-name">${f.name}</span>
+      <span class="file-item-size">${fmtSize(f.size)} · ${f.rows.length} rows</span>
+      <button class="file-item-remove" onclick="removeFile(${i})" title="Remove">×</button>
+    </div>`).join('');
+}
+
+// ── Proceed button ──
+async function proceedWithFiles() {
+  if (uploadedFiles.length === 0) return;
+  document.getElementById('uploadError').style.display = 'none';
+
+  if (currentMode === 'standard') {
+    // Standard: must be single CSV
+    if (uploadedFiles.length > 1) {
+      showError('Standard Mode accepts a single CSV file. Switch to Flexible Mode for multiple files.');
+      return;
+    }
+    const f = uploadedFiles[0];
+    const err = validateCSV(f.rows, f.fields);
+    if (err) { showError(err); return; }
+    // Route through missing value screen (same as flexible mode)
+    showMissingScreen(f.rows, f.fields, f.name, undefined, undefined);
+    return;
+  }
+
+  // Flexible mode
+  if (uploadedFiles.length === 1) {
+    // Single file: skip merge, go straight to mapping analysis
+    await runFlexibleAnalysis(uploadedFiles[0].rows, uploadedFiles[0].fields);
+  } else {
+    // Multiple files: run merge plan analysis
+    await runMergeAnalysis();
+  }
+}
+
+// ── SHARED: show/hide plan layout ──
+function showPlanLayout() {
+  document.getElementById('planAnalyzingWrap').style.display = 'none';
+  document.getElementById('planLayout').style.display = 'grid';
+}
+function showPlanAnalyzing(msg) {
+  document.getElementById('planAnalyzingWrap').style.display = '';
+  document.getElementById('planLayout').style.display = 'none';
+  document.getElementById('planAnalyzing').style.display = 'block';
+  document.getElementById('planIncompatible').style.display = 'none';
+  document.getElementById('planAnalyzingMsg').textContent = msg;
+}
+function showPlanIncompatible(msg) {
+  document.getElementById('planAnalyzingWrap').style.display = '';
+  document.getElementById('planLayout').style.display = 'none';
+  document.getElementById('planAnalyzing').style.display = 'none';
+  document.getElementById('planIncompatible').style.display = 'block';
+  document.getElementById('planIncompatibleMsg').textContent = msg;
+}
+
+// ── CHAT HELPERS ──
+function appendChatMsg(role, text) {
+  const messages = document.getElementById('chatMessages');
+  const div = document.createElement('div');
+  div.className = 'chat-msg ' + role;
+  if (role === 'assistant') {
+    div.innerHTML = `<div class="chat-avatar">C</div><div class="chat-bubble">${text.split('\n').join('<br>')}</div>`;
+  } else {
+    div.innerHTML = `<div class="chat-bubble">${text.split('\n').join('<br>')}</div>`;
+  }
+  messages.appendChild(div);
+  messages.scrollTop = messages.scrollHeight;
+}
+
+function showChatThinking() {
+  const messages = document.getElementById('chatMessages');
+  const div = document.createElement('div');
+  div.className = 'chat-msg assistant'; div.id = 'chatThinking';
+  div.innerHTML = `<div class="chat-avatar">C</div><div class="chat-thinking"><div class="chat-thinking-dots"><span></span><span></span><span></span></div></div>`;
+  messages.appendChild(div);
+  messages.scrollTop = messages.scrollHeight;
+}
+function hideChatThinking() {
+  const el = document.getElementById('chatThinking');
+  if (el) el.remove();
+}
+
+async function sendChatMessage() {
+  const input = document.getElementById('chatInput');
+  const btn = document.getElementById('chatSendBtn');
+  const text = input.value.trim();
+  if (!text) return;
+
+  input.value = ''; input.style.height = '36px';
+  btn.disabled = true;
+  appendChatMsg('user', text);
+  conversationHistory.push({ role: 'user', content: text });
+  showChatThinking();
+
+  // System prompt rebuilt fresh inside the fetch call (always latest state)
+
+  try {
+    // Rebuild system prompt fresh each turn so Claude always sees latest mapping/transforms
+    const freshSystem = buildChatSystemPrompt();
+    // Keep only last 8 turns to avoid context bloat
+    const recentHistory = conversationHistory.slice(-8);
+    const response = await fetch('http://localhost:3001/api/messages', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514', max_tokens: 8096,
+        system: freshSystem,
+        messages: recentHistory
+      })
+    });
+    if (!response.ok) throw new Error('API error ' + response.status);
+    const data = await response.json();
+    const reply = data.content?.find(b => b.type === 'text')?.text || '';
+
+    hideChatThinking();
+    conversationHistory.push({ role: 'assistant', content: reply });
+
+    // Try to extract updated JSON plan from reply
+    // Extract JSON updates from reply and apply them to the UI
+    let updatesApplied = false;
+    const fenceIdx = reply.indexOf('```json');
+    if (fenceIdx !== -1) {
+      const afterFence = reply.slice(fenceIdx + 7);
+      const closeIdx = afterFence.indexOf('```');
+      if (closeIdx !== -1) {
+        try {
+          const parsed = JSON.parse(afterFence.slice(0, closeIdx).trim());
+          const upd = parsed.updates || parsed;
+          applyUpdates(upd);
+          updatesApplied = true;
+        } catch(e) { /* parse failed, show reply as-is */ }
+      }
+    }
+    // Strip JSON block from displayed message
+    let humanText = reply;
+    const fi2 = humanText.indexOf('```json');
+    const ci2 = humanText.lastIndexOf('```');
+    if (fi2 !== -1 && ci2 > fi2) humanText = (humanText.slice(0, fi2) + humanText.slice(ci2+3)).trim();
+    appendChatMsg('assistant', humanText.trim() || (updatesApplied ? 'Done — updates applied. Anything else?' : '(no response)'));
+    // If preview is open, always refresh it after any chat turn
+    const prevPanel2 = document.getElementById('previewPanel');
+    if (prevPanel2 && prevPanel2.style.display === 'block') renderPreview();
+  } catch(e) {
+    hideChatThinking();
+    appendChatMsg('assistant', 'Sorry, something went wrong: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    document.getElementById('chatInput').focus();
+  }
+}
+
+function buildChatSystemPrompt() {
+  const fileInfo = uploadedFiles.map(f => '"' + f.name + '" (' + f.rows.length + ' rows, ' + f.fields.length + ' columns)').join('\n');
+  const cols = allFieldsForChat.join(', ');
+  const mappingStr = JSON.stringify(flexMapping, null, 2);
+  const transformStr = flexTransforms.length ? JSON.stringify(flexTransforms, null, 2) : 'none';
+
+  return 'You are helping a researcher prepare their dataset for a dashboard comparing self-reported vs objective social media use.' +
+    '\n\nFile(s): ' + fileInfo +
+    '\n\nAvailable columns: ' + cols +
+    '\n\nCurrent column mapping:' +
+    '\n' + mappingStr +
+    '\n\nCurrent transforms: ' + transformStr +
+    '\n\nThe user may ask you to do any of the following. For each, return a JSON block with the key "updates" containing the relevant changes.' +
+    '\n\n1. REMAP A COLUMN: change which column fills a role.' +
+    '\n   Return: {"updates":{"mapping":{"subjective_time":"new_col"}}}' +
+    '\n\n2. CHANGE UNIT: change the time unit for a column.' +
+    '\n   Return: {"updates":{"units":{"subjective_time":"hours"}}}' +
+    '\n\n3. COMBINE COLUMNS (e.g. hours*60+minutes): create a computed variable.' +
+    '\n   Return: {"updates":{"transforms":[{"role":"subjective_time","type":"combine","expression":"Q21_1*60+Q21_2","columns":["Q21_1","Q21_2"],"description":"hours*60 + minutes"}]}}' +
+    '\n\n4. RECODE VALUES: map old values to new ones.' +
+    '\n   Return: {"updates":{"transforms":[{"role":"gender","type":"recode","map":{"1":"male","2":"female","3":"other"},"column":"gender","description":"recode gender numeric to labels"}]}}' +
+    '\n\n5. REVERSE SCORE: invert a scale (e.g. 8 - value for 1-7 scale).' +
+    '\n   Return: {"updates":{"transforms":[{"role":"autonomy","type":"reverse","max":8,"columns":["Q25_3","Q25_4"],"description":"reverse score items 3 and 4"}]}}' +
+    '\n\n6. LOOKUP / FLAG COLUMNS: multiple flag columns each representing a category — combine into one text column.' +
+    '\n   Use for: ethnicity flags, gender flags, checkbox responses, yes/no columns, any binary indicator columns.' +
+    '\n   NEVER write code for this. ALWAYS use the lookup type.' +
+    '\n   MANDATORY fields — you MUST include ALL of these or the transform will not work:' +
+    '\n     - "columns": EXACT list of all source column names (copy from available columns list)' +
+    '\n     - "labels": label for each column IN THE SAME ORDER as columns' +
+    '\n     - "multi_label": label when more than one column matches (e.g. "Multiracial", "Multiple", "Other")' +
+    '\n     - "trigger_value": the value that means "this category applies" — use 1 for numeric, "yes"/"TRUE"/"Y" for strings' +
+    '\n   CRITICAL: You MUST also include "other_columns" in the same update to:' +
+    '\n     (a) add the new role name (e.g. "ethnicity") to the "demo" list' +
+    '\n     (b) move ALL source flag columns (e.g. eth_white_raw, eth_black_raw…) to the "ignored" list' +
+    '\n   Always carry over all existing demo/ext/ignored columns — only add/move the ones affected.' +
+    '\n   Example (numeric flags): {"updates":{"transforms":[{"role":"ethnicity","type":"lookup",' +
+    '"columns":["eth_white_raw","eth_black_raw","eth_asian_raw"],' +
+    '"labels":["White","Black","Asian"],' +
+    '"multi_label":"Multiracial","trigger_value":1,' +
+    '"description":"combine ethnicity flags into one column"}],' +
+    '"other_columns":{"demo":["ethnicity"],"ext":[],"ignored":["eth_white_raw","eth_black_raw","eth_asian_raw"]}}}' +
+    '\n   Example (string flags): {"updates":{"transforms":[{"role":"condition","type":"lookup",' +
+    '"columns":["has_anxiety_col","has_depression_col"],' +
+    '"labels":["Anxiety","Depression"],' +
+    '"multi_label":"Multiple","trigger_value":"yes",' +
+    '"description":"combine condition flags into one column"}],' +
+    '"other_columns":{"demo":["condition"],"ext":[],"ignored":["has_anxiety_col","has_depression_col"]}}}' +
+    '\n   REMINDER: columns and labels must have the same length. If you omit columns, labels, or other_columns, the transform will silently fail.' +
+    '\n\n7. FILTER ROWS: keep only rows matching a condition.' +
+    '\n   Return: {"updates":{"transforms":[{"role":"__filter__","type":"filter","condition":"finished === 1","description":"keep only completed surveys"}]}}' +
+    '\n\n8. RECLASSIFY COLUMN: move a column between demographic/extension/ignored.' +
+    '\n   Return: {"updates":{"other_columns":{"demo":["gender"],"ext":["wellbeing"],"ignored":["meta_col"]}}}' +
+    '\n\nCRITICAL RULES — follow exactly:' +
+    '\n- NEVER write code (JavaScript, Python, R, etc). This platform does not run code.' +
+    '\n- For ALL data changes use the transform types above (combine/recode/reverse/lookup/filter).' +
+    '\n- The lookup type handles ALL multi-column flag/binary-to-label needs. Use it, never write code for it.' +
+    '\n- ALWAYS wrap updates in a single ```json code block. No other block types (no ```js, no ```python).' +
+    '\n- For transforms, REPLACE the entire transforms array (keep existing ones plus add new).' +
+    '\n- Use exact column names from the available columns list.' +
+    '\n- After the JSON block, confirm in 1-2 sentences what you did.' +
+    '\n- If the user asks a question only, answer conversationally — no JSON needed.';
+}
+
+// ── MERGE ANALYSIS (multi-file) ──
+async function runMergeAnalysis() {
+  document.getElementById('uploadScreen').style.display = 'none';
+  document.getElementById('planScreen').style.display = 'flex';
+  document.getElementById('planTitle').textContent = 'Review Merge & Mapping Plan';
+  document.getElementById('planSubtitle').textContent = 'Claude has analyzed your files. Review the plan on the left and use the chat to make adjustments.';
+  showPlanAnalyzing('Analyzing files and proposing merge plan…');
+  conversationHistory = []; currentPlanJSON = null;
+  document.getElementById('chatMessages').innerHTML = '';
+
+  // For merge analysis: only send field names + row count, no sample data
+  // Sample data is too large for multi-file datasets and causes JSON truncation
+  const fileSummaries = uploadedFiles.map(f => ({
+    name: f.name,
+    fields: f.fields,
+    rowCount: f.rows.length
+  }));
+
+    const prompt = 'You are analyzing multiple data files to propose how to merge them for a research dashboard comparing self-reported vs objective social media use.' +
+    '\n\nFiles:' +
+    fileSummaries.map((f, i) => '\nFile ' + (i+1) + ': "' + f.name + '" (' + f.rowCount + ' rows), columns: ' + JSON.stringify(f.fields)).join('') +
+    '\n\nReturn ONLY this JSON, no markdown, no extra text:' +
+    '\n{"file_descriptions":[{"index":0,"name":"filename","description":"brief","granularity":"one row per participant-day|one row per participant|other"}],' +
+    '"merge_steps":[{"left_file_index":0,"right_file_index":1,"join_key_left":"col","join_key_right":"col","join_type":"inner|left","rationale":"why"}],' +
+    '"confidence":"high|medium|low","notes":"caveats or null"}' +
+    '\nChain steps for 3+ files. Keep descriptions very brief (under 10 words each).'
+
+  try {
+    const response = await fetch('http://localhost:3001/api/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 8096, messages: [{ role: 'user', content: prompt }] })
+    });
+    if (!response.ok) throw new Error('API error ' + response.status);
+    const data = await response.json();
+    const text = data.content?.find(b => b.type === 'text')?.text || '';
+    let parsedPlan;
+    try {
+      parsedPlan = JSON.parse(text.split('```json').pop().split('```')[0].trim());
+    } catch(parseErr) {
+      document.getElementById('planAnalyzingMsg').textContent = 'Response too long — retrying with column names only…';
+      const retryPrompt = 'Propose how to merge these files. Return ONLY valid JSON, no markdown.' +
+        '\n\nFiles: ' + uploadedFiles.map((f,i) => 'File ' + (i+1) + ': "' + f.name + '", columns: ' + JSON.stringify(f.fields)).join('\n') +
+        '\n\nReturn ONLY:{"file_descriptions":[{"index":0,"name":"x","description":"x","granularity":"x"}],' +
+        '"merge_steps":[{"left_file_index":0,"right_file_index":1,"join_key_left":"col","join_key_right":"col","join_type":"inner","rationale":"x"}],' +
+        '"confidence":"high","notes":null}';
+      const r2 = await fetch('http://localhost:3001/api/messages', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:8096, messages:[{role:'user',content:retryPrompt}] })
+      });
+      if (!r2.ok) throw new Error('Retry failed: ' + r2.status);
+      const d2 = await r2.json();
+      const t2 = d2.content?.find(b=>b.type==='text')?.text || '';
+      parsedPlan = JSON.parse(t2.split('```json').pop().split('```')[0].trim());
+    }
+    mergePlan = parsedPlan;
+    currentPlanJSON = mergePlan;
+    showPlanLayout();
+    renderMergePlanUI(mergePlan);
+    const openingMsg = 'I\'ve analyzed your ' + uploadedFiles.length + ' files. Here\'s what I found:\n\n' +
+      (mergePlan.file_descriptions || []).map(fd => '• **' + fd.name + '**: ' + fd.description).join('\n') +
+      '\n\nI\'m proposing to join them using the keys shown on the left.' +
+      (mergePlan.notes ? '\n\nNote: ' + mergePlan.notes : '') +
+      '\n\nDoes this look right? Feel free to ask me to adjust anything.';
+    conversationHistory.push({ role: 'assistant', content: openingMsg });
+    appendChatMsg('assistant', openingMsg.replace(/[*][*](.*?)[*][*]/g, '<strong>$1</strong>'));
+  } catch(e) {
+    showPlanIncompatible('Could not analyze files for merging: ' + e.message);
+  }
+}
+
+function renderMergePlanUI(plan) {
+  // File summary cards
+  const grid = document.getElementById('fileSummaryGrid');
+  grid.innerHTML = (plan.file_descriptions || []).map(fd => {
+    const f = uploadedFiles[fd.index];
+    return `<div class="file-summary-row">
+      <span class="file-summary-name">${fd.name}</span>
+      <span class="file-summary-desc">${fd.description} <em style="color:var(--text-dim)">(${fd.granularity})</em></span>
+      <span class="file-summary-badge">${f ? f.rows.length + ' rows' : ''}</span>
+    </div>`;
+  }).join('');
+
+  // Join config
+  const joinConf = document.getElementById('joinConfig');
+  joinConf.innerHTML = '';
+  if (plan.merge_steps && plan.merge_steps.length > 0) {
+    const header = document.createElement('div');
+    header.style.cssText = 'font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim);margin-bottom:10px;margin-top:16px';
+    header.textContent = 'Join Configuration';
+    joinConf.appendChild(header);
+
+    plan.merge_steps.forEach((step, i) => {
+      const leftFile = uploadedFiles[step.left_file_index];
+      const rightFile = uploadedFiles[step.right_file_index];
+      const allFields = [...(leftFile?.fields || []), ...(rightFile?.fields || [])];
+      const uniqueFields = [...new Set(allFields)];
+
+      const row = document.createElement('div');
+      row.className = 'join-row';
+      row.innerHTML = `
+        <span class="join-label">
+          ${step.merge_steps?.length > 1 ? `Step ${i+1}: ` : ''}
+          <strong>${leftFile?.name || 'file'}</strong> + <strong>${rightFile?.name || 'file'}</strong>
+        </span>
+        <span style="font-size:11px;color:var(--text-dim)">join on</span>
+        <select class="join-select" id="joinKeyLeft_${i}">
+          ${(leftFile?.fields || []).map(f => `<option value="${f}" ${f===step.join_key_left?'selected':''}>${f}</option>`).join('')}
+        </select>
+        <span style="font-size:11px;color:var(--text-dim)">=</span>
+        <select class="join-select" id="joinKeyRight_${i}">
+          ${(rightFile?.fields || []).map(f => `<option value="${f}" ${f===step.join_key_right?'selected':''}>${f}</option>`).join('')}
+        </select>
+        <select class="join-type-select" id="joinType_${i}">
+          <option value="inner" ${step.join_type==='inner'?'selected':''}>Inner join</option>
+          <option value="left"  ${step.join_type==='left'?'selected':''}>Left join</option>
+        </select>`;
+      if (step.rationale) {
+        const note = document.createElement('div');
+        note.style.cssText = 'font-size:10px;color:var(--text-dim);margin-top:2px;font-style:italic;width:100%';
+        note.textContent = step.rationale;
+        row.appendChild(note);
+      }
+      joinConf.appendChild(row);
+    });
+
+    if (plan.notes) {
+      const note = document.createElement('div');
+      note.style.cssText = 'font-size:10px;color:var(--amber);margin-top:12px;padding:8px 10px;background:rgba(160,112,32,0.08);border-radius:3px;border-left:2px solid var(--amber)';
+      note.textContent = '⚠ ' + plan.notes;
+      joinConf.appendChild(note);
+    }
+  }
+
+  document.getElementById('mergePlanBox').style.display = 'block';
+}
+
+function confirmMerge() {
+  // Execute merge with user-confirmed settings
+  if (!mergePlan || !mergePlan.merge_steps) {
+    // Single step or no merge needed
+    mergedRows = uploadedFiles[0].rows;
+    mergedFields = uploadedFiles[0].fields;
+  } else {
+    try {
+      let result = { rows: uploadedFiles[mergePlan.merge_steps[0].left_file_index]?.rows || [], fields: uploadedFiles[mergePlan.merge_steps[0].left_file_index]?.fields || [] };
+
+      mergePlan.merge_steps.forEach((step, i) => {
+        const leftKeyEl  = document.getElementById('joinKeyLeft_' + i);
+        const rightKeyEl = document.getElementById('joinKeyRight_' + i);
+        const joinTypeEl = document.getElementById('joinType_' + i);
+        const leftKey  = leftKeyEl  ? leftKeyEl.value  : step.join_key_left;
+        const rightKey = rightKeyEl ? rightKeyEl.value : step.join_key_right;
+        const joinType = joinTypeEl ? joinTypeEl.value : step.join_type;
+        const rightFile = uploadedFiles[step.right_file_index];
+        if (!rightFile) return;
+
+        // Build lookup from right file
+        const lookup = {};
+        rightFile.rows.forEach(row => {
+          const key = String(row[rightKey]);
+          if (!lookup[key]) lookup[key] = [];
+          lookup[key].push(row);
+        });
+
+        // New fields from right (excluding join key to avoid dup)
+        const newFields = rightFile.fields.filter(f => f !== rightKey && !result.fields.includes(f));
+        const merged = [];
+
+        result.rows.forEach(leftRow => {
+          const key = String(leftRow[leftKey]);
+          const matches = lookup[key] || [];
+          if (matches.length > 0) {
+            matches.forEach(rightRow => {
+              const out = { ...leftRow };
+              newFields.forEach(f => { out[f] = rightRow[f]; });
+              merged.push(out);
+            });
+          } else if (joinType === 'left') {
+            const out = { ...leftRow };
+            newFields.forEach(f => { out[f] = null; });
+            merged.push(out);
+          }
+        });
+
+        result = { rows: merged, fields: [...result.fields, ...newFields] };
+      });
+
+      mergedRows = result.rows;
+      mergedFields = result.fields;
+    } catch(e) {
+      alert('Merge failed: ' + e.message);
+      return;
+    }
+  }
+
+  // Proceed to flexible mapping analysis
+  allFieldsForChat = mergedFields;
+  runFlexibleAnalysis(mergedRows, mergedFields);
+}
+
+function backToUpload() {
+  document.getElementById('planScreen').style.display = 'none';
+  document.getElementById('uploadScreen').style.display = 'flex';
+  const prevPanel = document.getElementById('previewPanel');
+  if (prevPanel) prevPanel.style.display = 'none';
+  renderFileList();
+}
+
+// ── FLEXIBLE: run AI column mapping analysis ──
+async function runFlexibleAnalysis(rows, fields) {
+  document.getElementById('uploadScreen').style.display = 'none';
+  document.getElementById('planScreen').style.display = 'flex';
+  document.getElementById('planTitle').textContent = 'Review Data Mapping';
+  document.getElementById('planSubtitle').textContent = 'Claude has analyzed your data. Review the mapping on the left and use the chat to make adjustments.';
+  showPlanAnalyzing('Mapping columns to dashboard roles…');
+  conversationHistory = []; currentPlanJSON = null;
+  document.getElementById('chatMessages').innerHTML = '';
+  allFieldsForChat = fields;
+
+  mergedRows = rows;
+  mergedFields = fields;
+  isFlexibleMode = true;
+
+  const sample = rows.slice(0, 3).map(r => { const o={}; fields.forEach(f=>{o[f]=r[f];}); return o; });
+
+  const prompt = 'You are analyzing a dataset to map its columns to roles for a research dashboard comparing self-reported vs objective social media use.' +
+    '\n\nColumn names: ' + JSON.stringify(fields) +
+    '\nFirst 5 rows: ' + JSON.stringify(sample, null, 2) +
+    '\n\nReturn ONLY this JSON:' +
+    '\n{"compatible":true,"incompatible_reason":null,"mapping":{"participant_id":"col","day":"col","subjective_time":"col","objective_time":"col","subjective_pickups":"col or null","objective_pickups":"col or null"},' +
+    '"confidence":{"participant_id":"high|medium|low","day":"high|medium|low","subjective_time":"high|medium|low","objective_time":"high|medium|low","subjective_pickups":"high|medium|low","objective_pickups":"high|medium|low"},' +
+    '"units":{"subjective_time":"minutes|hours|seconds","objective_time":"minutes|hours|seconds"},' +
+    '"other_columns":{"demo":["demographic cols"],"ext":["numeric extension cols"],"ignored":["remaining cols"]}}' +
+    '\nRules: compatible=false if no subjective+objective pair, no participant id, or no time/day. subjective_pickups and objective_pickups are optional. Use only exact column names.'
+
+  try {
+    const response = await fetch('http://localhost:3001/api/messages', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 8096, messages: [{ role: 'user', content: prompt }] })
+    });
+    if (!response.ok) throw new Error('API error ' + response.status);
+    const data = await response.json();
+    const text = data.content?.find(b => b.type==='text')?.text || '';
+
+    let result;
+    try {
+      result = JSON.parse(text.split('```json').pop().split('```')[0].trim());
+    } catch(parseErr) {
+      // JSON likely truncated — retry with column names only, no sample data
+      document.getElementById('planAnalyzingMsg').textContent = 'Response was too long — retrying with column names only…';
+      const retryPrompt = 'Map these dataset column names to dashboard roles. Return ONLY valid JSON, no markdown.' +
+        '\\n\\nAll columns (' + fields.length + ' total): ' + JSON.stringify(fields) +
+        '\\n\\nJSON structure required:' +
+        '\\n{"compatible":true,"incompatible_reason":null,' +
+        '"mapping":{"participant_id":"col or null","day":"col or null","subjective_time":"col or null","objective_time":"col or null","subjective_pickups":"col or null","objective_pickups":"col or null"},' +
+        '"confidence":{"participant_id":"low","day":"low","subjective_time":"low","objective_time":"low","subjective_pickups":"low","objective_pickups":"low"},' +
+        '"units":{"subjective_time":"minutes","objective_time":"minutes"},' +
+        '"other_columns":{"demo":["demographic cols"],"ext":["numeric extension cols"],"ignored":["other cols"]}}' +
+        '\\nSet compatible=false if no subjective+objective pair exists. Use exact column names only.';
+      const r2 = await fetch('http://localhost:3001/api/messages', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:8096, messages:[{role:'user',content:retryPrompt}] })
+      });
+      if (!r2.ok) throw new Error('Retry API error ' + r2.status);
+      const d2 = await r2.json();
+      const t2 = d2.content?.find(b=>b.type==='text')?.text || '';
+      result = JSON.parse(t2.split('```json').pop().split('```')[0].trim());
+    }
+
+    document.getElementById('planAnalyzing').style.display = 'none';
+
+    if (!result.compatible) {
+      document.getElementById('planIncompatible').style.display = 'block';
+      document.getElementById('planIncompatibleMsg').textContent = result.incompatible_reason ||
+        'Your dataset does not appear to contain both self-reported and objective measures.';
+      return;
+    }
+
+    currentPlanJSON = result;
+    flexMapping = result.mapping || {};
+    flexUnitMap = result.units || {};
+    flexVarCategories = {};
+    (result.other_columns?.demo || []).forEach(c => { flexVarCategories[c] = 'demo'; });
+    (result.other_columns?.ext  || []).forEach(c => { flexVarCategories[c] = 'ext'; });
+    (result.other_columns?.ignored || []).forEach(c => { flexVarCategories[c] = 'ignored'; });
+
+    flexTransforms = []; // reset transforms for new file
+    showPlanLayout();
+    document.getElementById('mergePlanBox').style.display = 'none';
+    renderMappingUI(result, fields);
+    renderTransforms();
+
+    // Opening chat message
+    const mapped = Object.entries(result.mapping || {}).filter(([,v])=>v).map(([k,v])=>`• **${k}** → ${v}`).join('\n');
+    const openingMsg = `I've analyzed your dataset (${fields.length} columns, ${rows.length} rows).\n\nHere's how I've mapped your columns:\n${mapped}\n\nConfidence is shown next to each mapping. Feel free to ask me to change anything — or just confirm when you're ready.`;
+    conversationHistory.push({ role: 'assistant', content: openingMsg });
+    appendChatMsg('assistant', openingMsg.replace(/[*][*](.*?)[*][*]/g,'<strong>$1</strong>').replace(/`([^`]*)`/g,'<code style="background:var(--surface2);padding:1px 4px;border-radius:2px">$1</code>'));
+  } catch(e) {
+    showPlanIncompatible('Could not analyze dataset: ' + e.message);
+  }
+}
+
+function renderMappingUI(result, fields) {
+  const CORE_ROLES = [
+    { key:'participant_id',    label:'Participant ID',        desc:'Unique identifier per participant',       optional:false, hasUnit:false },
+    { key:'day',               label:'Day / Time',            desc:'Time dimension (day, date, session)',     optional:false, hasUnit:false },
+    { key:'subjective_time',   label:'Self-reported time',    desc:'Estimated screen/use time',              optional:false, hasUnit:true  },
+    { key:'objective_time',    label:'Objective time',        desc:'Measured/recorded screen/use time',      optional:false, hasUnit:true  },
+    { key:'subjective_pickups',label:'Self-reported pickups', desc:'Estimated pickup/session count',         optional:true,  hasUnit:false },
+    { key:'objective_pickups', label:'Objective pickups',     desc:'Measured pickup/session count',          optional:true,  hasUnit:false },
+  ];
+
+  const tbody = document.getElementById('mappingTableBody');
+  tbody.innerHTML = '';
+  CORE_ROLES.forEach(role => {
+    const mapped = result.mapping?.[role.key] || null;
+    const conf   = result.confidence?.[role.key] || 'low';
+    const unit   = result.units?.[role.key] || 'minutes';
+    const confClass = conf==='high'?'conf-high':conf==='medium'?'conf-med':'conf-low';
+    const unitCell = role.hasUnit
+      ? `<select class="mapping-unit" id="unit_${role.key}" onchange="flexUnitMap['${role.key}']=this.value">
+           <option value="minutes" ${unit==='minutes'?'selected':''}>minutes</option>
+           <option value="hours"   ${unit==='hours'?'selected':''}>hours</option>
+           <option value="seconds" ${unit==='seconds'?'selected':''}>seconds</option>
+         </select>`
+      : '<span style="color:var(--text-dim);font-size:10px">—</span>';
+    const opts = `<option value="">— not mapped —</option>` + fields.map(f=>`<option value="${f}" ${f===mapped?'selected':''}>${f}</option>`).join('');
+    tbody.innerHTML += `<tr class="mapping-row">
+      <td>
+        <div class="mapping-role">${role.label}${role.optional?' <span style="font-size:9px;opacity:0.55">(optional)</span>':''}</div>
+        <div class="mapping-role-desc">${role.desc}</div>
+      </td>
+      <td><select class="mapping-select" id="map_${role.key}" onchange="flexMapping['${role.key}']=this.value||null">${opts}</select></td>
+      <td>${unitCell}</td>
+      <td><span class="conf-badge ${confClass}">${conf}</span></td>
+    </tr>`;
+  });
+
+  document.getElementById('planMappingBox').style.display = 'block';
+  renderVarChips(fields, result.mapping || {});
+  document.getElementById('planVarBox').style.display = 'block';
+  document.getElementById('planActions').style.display = 'flex';
+}
+
+// Track selected chips per column: { demo: Set, ext: Set, ignored: Set }
+const chipSelection = { demo: new Set(), ext: new Set(), ignored: new Set() };
+// Track last-clicked for shift-range selection
+const lastClicked = { demo: null, ext: null, ignored: null };
+
+function renderVarChips(fields, mapping) {
+  const mappedCols = new Set(Object.values(mapping).filter(Boolean));
+  const otherCols = fields.filter(f => !mappedCols.has(f));
+  otherCols.forEach(c => { if (!flexVarCategories[c]) flexVarCategories[c] = 'ext'; });
+  // Remove phantom entries (not in fields and not a computed role)
+  const computedRoleNames = new Set(flexTransforms.filter(t=>t.role&&t.role!=='__filter__').map(t=>t.role));
+  Object.keys(flexVarCategories).forEach(c => {
+    if (!fields.includes(c) && !computedRoleNames.has(c)) {
+      delete flexVarCategories[c];
+    }
+  });
+  // Clean up selection sets — remove cols that moved away
+  ['demo','ext','ignored'].forEach(cat => {
+    chipSelection[cat].forEach(c => {
+      if (flexVarCategories[c] !== cat) chipSelection[cat].delete(c);
+    });
+  });
+
+  function buildChips(containerId, category) {
+    const container = document.getElementById(containerId);
+    container.innerHTML = '';
+    const cols = otherCols.filter(c => flexVarCategories[c] === category);
+    if (!cols.length) {
+      container.innerHTML = '<span style="color:var(--text-dim);font-size:10px;font-style:italic;padding:4px 6px;display:block">none</span>';
+      const countEl = document.getElementById(category === 'demo' ? 'demoCount' : category === 'ext' ? 'extCount' : 'ignoredCount');
+      if (countEl) countEl.textContent = '';
+      return;
+    }
+    cols.forEach((col, idx) => {
+      const isSelected = chipSelection[category].has(col);
+      const chip = document.createElement('div');
+      chip.className = 'var-chip' + (isSelected ? ' selected' : '');
+      chip.dataset.col = col;
+      chip.dataset.cat = category;
+      chip.dataset.idx = idx;
+      chip.innerHTML = `<span class="var-chip-check">${isSelected ? '✓' : ''}</span><span>${col}</span>`;
+      chip.addEventListener('click', (e) => {
+        const cat = chip.dataset.cat;
+        const clickedIdx = parseInt(chip.dataset.idx);
+        if (e.shiftKey && lastClicked[cat] !== null) {
+          // Range select
+          const allChips = [...container.querySelectorAll('.var-chip')];
+          const from = Math.min(lastClicked[cat], clickedIdx);
+          const to   = Math.max(lastClicked[cat], clickedIdx);
+          allChips.slice(from, to + 1).forEach(c => {
+            chipSelection[cat].add(c.dataset.col);
+          });
+        } else {
+          if (chipSelection[cat].has(col)) {
+            chipSelection[cat].delete(col);
+          } else {
+            chipSelection[cat].add(col);
+          }
+          lastClicked[cat] = clickedIdx;
+        }
+        renderVarChips(allFieldsForChat, flexMapping);
+      });
+      container.appendChild(chip);
+    });
+    // Update count badge
+    const countEl = document.getElementById(category === 'demo' ? 'demoCount' : category === 'ext' ? 'extCount' : 'ignoredCount');
+    if (countEl) {
+      const selCount = chipSelection[category].size;
+      countEl.textContent = selCount > 0 ? `${selCount}/${cols.length} selected` : `${cols.length}`;
+    }
+  }
+  buildChips('demoChips','demo');
+  buildChips('extChips','ext');
+  buildChips('ignoredChips','ignored');
+}
+
+function selectAllInCol(cat) {
+  const containerId = cat === 'demo' ? 'demoChips' : cat === 'ext' ? 'extChips' : 'ignoredChips';
+  const container = document.getElementById(containerId);
+  container.querySelectorAll('.var-chip').forEach(chip => {
+    chipSelection[cat].add(chip.dataset.col);
+  });
+  renderVarChips(allFieldsForChat, flexMapping);
+}
+
+function clearSelectionInCol(cat) {
+  chipSelection[cat].clear();
+  lastClicked[cat] = null;
+  renderVarChips(allFieldsForChat, flexMapping);
+}
+
+function moveSelected(fromCat, toCat) {
+  if (!chipSelection[fromCat].size) return;
+  chipSelection[fromCat].forEach(col => {
+    flexVarCategories[col] = toCat;
+  });
+  chipSelection[fromCat].clear();
+  lastClicked[fromCat] = null;
+  renderVarChips(allFieldsForChat, flexMapping);
+}
+
+function reclassifyVar(col, newCat) {
+  flexVarCategories[col] = newCat;
+  renderVarChips(allFieldsForChat, flexMapping);
+}
+
+
+
+// ── PREVIEW DATA ──
+const CORE_ROLES_PREVIEW = ['participant_id','day','subjective_time','objective_time','subjective_pickups','objective_pickups'];
+
+function togglePreview() {
+  const panel = document.getElementById('previewPanel');
+  // Always re-render to latest state; toggle only closes if already open
+  if (panel.style.display === 'block') {
+    panel.style.display = 'none';
+  } else {
+    renderPreview();
+    panel.style.display = 'block';
+    panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+}
+
+function refreshPreview() {
+  // Always re-render regardless of visibility
+  renderPreview();
+  const panel = document.getElementById('previewPanel');
+  panel.style.display = 'block';
+  panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function renderPreview() {
+  // Run same logic as confirmMapping but just build the rows, don't navigate
+  const CORE_ROLES = CORE_ROLES_PREVIEW;
+  const computedRoles = new Set(flexTransforms.filter(t=>t.role!=='__filter__').map(t=>t.role));
+
+  // Read current dropdown values
+  CORE_ROLES.forEach(key => {
+    const el = document.getElementById('map_' + key);
+    if (el && el.value && el.value !== '__computed__') flexMapping[key] = el.value;
+    const unitEl = document.getElementById('unit_' + key);
+    if (unitEl) flexUnitMap[key] = unitEl.value;
+  });
+
+  // Apply filters
+  let rows = [...mergedRows];
+  flexTransforms.filter(t => t.type === 'filter').forEach(t => {
+    try {
+      rows = rows.filter(row => {
+        let expr = t.condition;
+        Object.keys(row).forEach(col => { expr = expr.split(col).join(JSON.stringify(row[col])); });
+        return Function('"use strict"; return (' + expr + ')')();
+      });
+    } catch(e) {}
+  });
+
+  // Build preview rows (first 20)
+  const previewRows = rows.slice(0, 20).map(row => {
+    const out = {};
+    // Compute transforms
+    const computedVals = {};
+    flexTransforms.filter(t => t.type !== 'filter').forEach(t => {
+      if (t.type === 'combine' && t.expression) {
+        try {
+          let expr = t.expression;
+          (t.columns || allFieldsForChat).forEach(col => {
+            expr = expr.split(col).join(String(Number(row[col]) || 0));
+          });
+          computedVals[t.role] = Math.round(Function('"use strict"; return (' + expr + ')')() * 100) / 100;
+        } catch(e) { computedVals[t.role] = 'ERR'; }
+      } else if (t.type === 'recode' && t.map && t.column) {
+        computedVals[t.role] = t.map[String(row[t.column])] ?? row[t.column];
+      } else if (t.type === 'reverse' && t.columns && t.max) {
+        const vals = (t.columns||[]).map(col => { const v=Number(row[col]); return isNaN(v)?null:t.max-v; }).filter(v=>v!==null);
+        computedVals[t.role] = vals.length ? Math.round(vals.reduce((a,b)=>a+b,0)/vals.length * 100)/100 : null;
+      } else if (t.type === 'lookup' && t.columns && t.labels) {
+        const trigger = t.trigger_value !== undefined ? t.trigger_value : 1;
+        const matched = [];
+        t.columns.forEach((col, i) => {
+          const val = row[col];
+          const isMatch = typeof trigger === 'number'
+            ? Number(val) === trigger
+            : String(val).toLowerCase() === String(trigger).toLowerCase();
+          if (isMatch) matched.push(t.labels[i] || col);
+        });
+        computedVals[t.role] = matched.length === 0 ? null :
+          matched.length === 1 ? matched[0] :
+          (t.multi_label || 'Multiple');
+      }
+    });
+
+    // Core roles
+    CORE_ROLES.forEach(key => {
+      if (computedVals[key] !== undefined) {
+        let val = computedVals[key];
+        const isTime = key==='subjective_time'||key==='objective_time';
+        if (isTime && val !== null && !isNaN(Number(val))) {
+          const unit = flexUnitMap[key]||'minutes';
+          const n = Number(val);
+          val = Math.round((unit==='hours'?n*60:unit==='seconds'?n/60:n)*10)/10;
+        }
+        out[key] = val;
+      } else {
+        const src = flexMapping[key];
+        if (!src) { out[key] = null; return; }
+        let val = row[src];
+        const isTime = key==='subjective_time'||key==='objective_time';
+        if (isTime && val!==null && val!=='' && !isNaN(Number(val))) {
+          const unit = flexUnitMap[key]||'minutes';
+          const n = Number(val);
+          val = Math.round((unit==='hours'?n*60:unit==='seconds'?n/60:n)*10)/10;
+        }
+        out[key] = val ?? null;
+      }
+    });
+
+    // Non-core computed cols (e.g. ethnicity from lookup) — written here while computedVals is in scope
+    Object.entries(computedVals).forEach(([role, val]) => {
+      if (!CORE_ROLES.includes(role) && role !== '__filter__') {
+        out[role] = val;
+      }
+    });
+
+    // Demo + ext cols
+    // Guard: skip computed role names (already set above) and columns not present in raw data
+    const _computedRoleNames = new Set(flexTransforms.filter(t=>t.role&&t.role!=='__filter__').map(t=>t.role));
+    Object.entries(flexVarCategories).forEach(([col, cat]) => {
+      if (cat !== 'ignored' && !_computedRoleNames.has(col)) {
+        if (!(col in row)) return;
+        const recode = flexTransforms.find(t=>t.type==='recode'&&t.column===col);
+        out[col] = recode?.map ? (recode.map[String(row[col])] ?? row[col]) : row[col];
+      }
+    });
+    return out;
+  });
+
+  // Render table
+  const demoCols = Object.entries(flexVarCategories).filter(([,v])=>v==='demo').map(([k])=>k);
+  const extCols2 = Object.entries(flexVarCategories).filter(([,v])=>v==='ext').map(([k])=>k);
+  // Non-core computed cols (e.g. ethnicity from lookup) — add to display, deduplicated with demoCols
+  const nonCoreComputed = [...computedRoles].filter(r => !CORE_ROLES.includes(r) && r !== '__filter__');
+  // Remove raw flag columns from demoCols/extCols2 that are now covered by a computed role
+  const _allComputedSourceCols = new Set(flexTransforms.filter(t=>t.type==='lookup'&&t.columns).flatMap(t=>t.columns));
+  const filteredDemoCols = demoCols.filter(c => !_allComputedSourceCols.has(c) && !nonCoreComputed.includes(c));
+  const filteredExtCols2 = extCols2.filter(c => !_allComputedSourceCols.has(c));
+  const allCols = [...CORE_ROLES.filter(r => flexMapping[r] || computedRoles.has(r)), ...nonCoreComputed, ...filteredDemoCols, ...filteredExtCols2];
+  const coreSet = new Set(CORE_ROLES);
+
+  const table = document.getElementById('previewTable');
+  table.innerHTML =
+    '<thead><tr>' + allCols.map(c => '<th class="' + (coreSet.has(c)?'core-col':'') + '">' + c + '</th>').join('') + '</tr></thead>' +
+    '<tbody>' + previewRows.map(row =>
+      '<tr>' + allCols.map(c => {
+        const v = row[c];
+        const isNull = v === null || v === undefined || v === '';
+        return '<td class="' + (coreSet.has(c)?'core-col':'') + (isNull?' null-val':'') + '">' + (isNull ? 'null' : String(v)) + '</td>';
+      }).join('') + '</tr>'
+    ).join('') + '</tbody>';
+
+  // Meta info
+  const nullCounts = {};
+  CORE_ROLES.forEach(r => {
+    if (!flexMapping[r] && !computedRoles.has(r)) return;
+    const nulls = previewRows.filter(row => row[r] === null || row[r] === undefined || row[r] === '').length;
+    if (nulls > 0) nullCounts[r] = nulls;
+  });
+  const filterCount = rows.length;
+  const meta = document.getElementById('previewMeta');
+  meta.innerHTML =
+    '<span><div class="preview-dot" style="background:var(--accent)"></div>Core columns</span>' +
+    '<span style="color:var(--text-dim)">Showing ' + previewRows.length + ' of ' + filterCount + ' rows' +
+    (filterCount < mergedRows.length ? ' (after filter)' : '') + '</span>' +
+    (Object.keys(nullCounts).length ?
+      '<span style="color:var(--over)">⚠ Null values in: ' + Object.entries(nullCounts).map(([k,n])=>k+'('+n+')').join(', ') + '</span>' : '') +
+    (flexTransforms.length ?
+      '<span style="color:var(--purple)">✦ ' + flexTransforms.length + ' transform(s) applied</span>' : '');
+}
+
+// ── BACK TO MAPPING from dashboard ──
+function backToMapping() {
+  document.getElementById('dashboard').style.display = 'none';
+  document.getElementById('missingScreen').style.display = 'none';
+  document.getElementById('navBackBtn').style.display = 'none';
+  if (isFlexibleMode) {
+    // Go back to missing screen if we have data there, otherwise plan screen
+    if (mvConvertedRows && mvConvertedRows.length > 0) {
+      document.getElementById('missingScreen').style.display = 'flex';
+      updateMissingPreview();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+    document.getElementById('planScreen').style.display = 'flex';
+    showPlanLayout();
+    const prevPanel = document.getElementById('previewPanel');
+    if (prevPanel) { renderPreview(); prevPanel.style.display = 'block'; }
+  } else {
+    document.getElementById('uploadScreen').style.display = 'flex';
+    renderFileList();
+  }
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ── APPLY UPDATES FROM CHAT ──
+function applyUpdates(upd) {
+  if (!upd) return;
+
+  // 1. Remap columns
+  if (upd.mapping) {
+    Object.entries(upd.mapping).forEach(([role, col]) => {
+      flexMapping[role] = col;
+      // Update dropdown if it exists
+      const el = document.getElementById('map_' + role);
+      if (el && col) el.value = col;
+    });
+  }
+
+  // 2. Update units
+  if (upd.units) {
+    Object.entries(upd.units).forEach(([role, unit]) => {
+      flexUnitMap[role] = unit;
+      const el = document.getElementById('unit_' + role);
+      if (el) el.value = unit;
+    });
+  }
+
+  // 3. Apply transforms (replace entire list)
+  if (upd.transforms) {
+    // Validate each transform before applying
+    const issues = [];
+    upd.transforms.forEach((t, i) => {
+      if (t.type === 'lookup') {
+        if (!t.columns || t.columns.length === 0) issues.push('Transform ' + (i+1) + ' (lookup for "' + t.role + '"): missing "columns" field');
+        if (!t.labels || t.labels.length === 0) issues.push('Transform ' + (i+1) + ' (lookup for "' + t.role + '"): missing "labels" field');
+        if (t.columns && t.labels && t.columns.length !== t.labels.length) issues.push('Transform ' + (i+1) + ' (lookup for "' + t.role + '"): columns (' + t.columns.length + ') and labels (' + t.labels.length + ') must have the same length');
+        // Check columns exist in data
+        if (t.columns) {
+          const missing = t.columns.filter(col => !allFieldsForChat.includes(col));
+          if (missing.length) issues.push('Transform ' + (i+1) + ' (lookup for "' + t.role + '"): column(s) not found in data: ' + missing.join(', '));
+        }
+      }
+    });
+    if (issues.length > 0) {
+      // Show issues in chat as assistant message
+      appendChatMsg('assistant', '⚠ The transform has issues that will prevent it from working:\n' + issues.join('\n') + '\n\nPlease ask me to fix these before continuing.');
+    }
+    flexTransforms = upd.transforms;
+
+    // Auto-register lookup roles into flexVarCategories as a safety net
+    // (only when other_columns is not also being updated in this same call)
+    if (!upd.other_columns) {
+      flexTransforms.forEach(t => {
+        if (t.type === 'lookup' && t.role && t.role !== '__filter__') {
+          if (!flexVarCategories[t.role]) {
+            flexVarCategories[t.role] = 'demo';
+          }
+          if (t.columns) {
+            t.columns.forEach(col => { flexVarCategories[col] = 'ignored'; });
+          }
+        }
+      });
+    }
+
+    renderTransforms();
+    // For computed columns: update mapping dropdown to show "computed"
+    flexTransforms.forEach(t => {
+      if (t.role && t.role !== '__filter__') {
+        const el = document.getElementById('map_' + t.role);
+        if (el) {
+          // Add a "computed" option if not present
+          if (!Array.from(el.options).find(o => o.value === '__computed__')) {
+            const opt = document.createElement('option');
+            opt.value = '__computed__'; opt.text = '⟨ computed ⟩';
+            el.insertBefore(opt, el.firstChild);
+          }
+          el.value = '__computed__';
+        }
+      }
+    });
+  }
+
+  // 4. Reclassify other columns
+  if (upd.other_columns) {
+    // Only keep column names that exist in the actual data OR are computed role names
+    const _computedNames = new Set(flexTransforms.filter(t=>t.role&&t.role!=='__filter__').map(t=>t.role));
+    const _validCol = c => allFieldsForChat.includes(c) || _computedNames.has(c);
+    flexVarCategories = {};
+    (upd.other_columns.demo    || []).filter(_validCol).forEach(c => { flexVarCategories[c] = 'demo'; });
+    (upd.other_columns.ext     || []).filter(_validCol).forEach(c => { flexVarCategories[c] = 'ext'; });
+    (upd.other_columns.ignored || []).filter(_validCol).forEach(c => { flexVarCategories[c] = 'ignored'; });
+    renderVarChips(allFieldsForChat, flexMapping);
+  }
+
+  // Update currentPlanJSON
+  currentPlanJSON = {
+    mapping: { ...flexMapping },
+    units: { ...flexUnitMap },
+    transforms: [...flexTransforms],
+    other_columns: {
+      demo:    Object.entries(flexVarCategories).filter(([,v])=>v==='demo').map(([k])=>k),
+      ext:     Object.entries(flexVarCategories).filter(([,v])=>v==='ext').map(([k])=>k),
+      ignored: Object.entries(flexVarCategories).filter(([,v])=>v==='ignored').map(([k])=>k)
+    }
+  };
+  // Auto-refresh preview if it's open
+  const prevPanel = document.getElementById('previewPanel');
+  if (prevPanel && prevPanel.style.display === 'block') renderPreview();
+}
+
+function renderTransforms() {
+  const box = document.getElementById('planTransformsBox');
+  const list = document.getElementById('transformsList');
+  if (!list) return;
+
+  if (!flexTransforms || flexTransforms.length === 0) {
+    box.style.display = 'none';
+    list.innerHTML = '<div class="transform-none">No transforms applied yet.</div>';
+    return;
+  }
+
+  box.style.display = 'block';
+  const icons = { combine: '⊕', recode: '↔', reverse: '↩', filter: '⊘', lookup: '⊗', computed: '⟨⟩' };
+  list.innerHTML = flexTransforms.map((t, i) => {
+    const icon = icons[t.type] || '✦';
+    const roleLabel = t.role === '__filter__' ? 'Row filter' : t.role;
+
+    // Build expression text based on type
+    let exprText = '';
+    if (t.type === 'combine' && t.expression) {
+      exprText = t.expression;
+    } else if (t.type === 'recode' && t.map) {
+      exprText = JSON.stringify(t.map);
+    } else if (t.type === 'filter' && t.condition) {
+      exprText = t.condition;
+    } else if (t.type === 'reverse') {
+      exprText = 'max=' + t.max + ' · cols: ' + (t.columns || []).join(', ');
+    } else if (t.type === 'lookup') {
+      // Show columns and labels so user can verify
+      if (t.columns && t.columns.length) {
+        const pairs = t.columns.map((col, ci) => col + ' → ' + (t.labels && t.labels[ci] ? t.labels[ci] : '?')).join(' | ');
+        exprText = pairs;
+        if (t.multi_label) exprText += ' | multiple → ' + t.multi_label;
+        if (t.trigger_value !== undefined && t.trigger_value !== 1) exprText += ' (trigger: ' + t.trigger_value + ')';
+      } else {
+        exprText = '⚠ No columns defined — ask Claude to redo this transform with exact column names';
+      }
+    }
+
+    // Warning if lookup has no columns
+    const hasWarning = t.type === 'lookup' && (!t.columns || t.columns.length === 0);
+
+    return '<div class="transform-item" style="' + (hasWarning ? 'border-color:var(--over);background:rgba(192,52,26,0.04)' : '') + '">' +
+      '<span class="transform-item-icon">' + icon + '</span>' +
+      '<div class="transform-item-body">' +
+      '<div class="transform-item-role">' + roleLabel + ' · ' + t.type + '</div>' +
+      '<div class="transform-item-desc">' + (t.description || '') + '</div>' +
+      (exprText ? '<div class="transform-item-expr" style="white-space:pre-wrap;word-break:break-all">' + exprText + '</div>' : '') +
+      '</div>' +
+      '<button onclick="removeTransform(' + i + ')" style="background:none;border:none;cursor:pointer;color:var(--text-dim);font-size:13px;padding:0 2px;flex-shrink:0" title="Remove">×</button>' +
+      '</div>';
+  }).join('');
+}
+
+function removeTransform(idx) {
+  flexTransforms.splice(idx, 1);
+  renderTransforms();
+  // Reset dropdown if no computed transform left for that role
+  const roles = new Set(flexTransforms.map(t => t.role));
+  ['subjective_time','objective_time','subjective_pickups','objective_pickups'].forEach(role => {
+    if (!roles.has(role)) {
+      const el = document.getElementById('map_' + role);
+      if (el) {
+        const computedOpt = Array.from(el.options).find(o => o.value === '__computed__');
+        if (computedOpt) el.removeChild(computedOpt);
+      }
+    }
+  });
+}
+
+function confirmMapping() {
+  const CORE_ROLES = ['participant_id','day','subjective_time','objective_time','subjective_pickups','objective_pickups'];
+
+  // Read current dropdown values (user may have changed manually)
+  CORE_ROLES.forEach(key => {
+    const el = document.getElementById('map_' + key);
+    if (el && el.value && el.value !== '__computed__') flexMapping[key] = el.value;
+    const unitEl = document.getElementById('unit_' + key);
+    if (unitEl) flexUnitMap[key] = unitEl.value;
+  });
+
+  // Validate required roles — allow computed transforms to satisfy them
+  const computedRoles = new Set(flexTransforms.filter(t=>t.role!=='__filter__').map(t=>t.role));
+  const required = ['participant_id','day','subjective_time','objective_time'];
+  const missing = required.filter(k => !flexMapping[k] && !computedRoles.has(k));
+  if (missing.length) { alert('Please map these required fields: ' + missing.join(', ')); return; }
+
+  // ── Apply row filters first ──
+  let rows = [...mergedRows];
+  flexTransforms.filter(t => t.type === 'filter').forEach(t => {
+    try {
+      rows = rows.filter(row => {
+        // Safe eval: replace column names with values
+        let expr = t.condition;
+        Object.keys(row).forEach(col => {
+          expr = expr.split(col).join(JSON.stringify(row[col]));
+        });
+        return Function('"use strict"; return (' + expr + ')')();
+      });
+    } catch(e) { console.warn('Filter failed:', t.condition, e); }
+  });
+
+  // ── Build output rows ──
+  const converted = rows.map(row => {
+    const out = {};
+
+    // Apply computed transforms first (they produce new column values)
+    const computedVals = {};
+    flexTransforms.filter(t => t.type !== 'filter').forEach(t => {
+      if (t.type === 'combine' && t.expression) {
+        try {
+          let expr = t.expression;
+          (t.columns || allFieldsForChat).forEach(col => {
+            const val = Number(row[col]) || 0;
+            expr = expr.split(col).join(String(val));
+          });
+          computedVals[t.role] = Function('"use strict"; return (' + expr + ')')();
+        } catch(e) { computedVals[t.role] = null; }
+      } else if (t.type === 'recode' && t.map && t.column) {
+        const raw = String(row[t.column]);
+        computedVals[t.role] = t.map[raw] !== undefined ? t.map[raw] : row[t.column];
+      } else if (t.type === 'reverse' && t.columns && t.max) {
+        const vals = (t.columns || []).map(col => {
+          const v = Number(row[col]);
+          return isNaN(v) ? null : t.max - v;
+        }).filter(v => v !== null);
+        computedVals[t.role] = vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : null;
+      } else if (t.type === 'lookup' && t.columns && t.labels) {
+        const trigger = t.trigger_value !== undefined ? t.trigger_value : 1;
+        const matched = [];
+        t.columns.forEach((col, i) => {
+          const val = row[col];
+          const isMatch = typeof trigger === 'number'
+            ? Number(val) === trigger
+            : String(val).toLowerCase() === String(trigger).toLowerCase();
+          if (isMatch) matched.push(t.labels[i] || col);
+        });
+        computedVals[t.role] = matched.length === 0 ? null :
+          matched.length === 1 ? matched[0] :
+          (t.multi_label || 'Multiple');
+      }
+    });
+
+    // Map core roles
+    CORE_ROLES.forEach(key => {
+      if (computedVals[key] !== undefined) {
+        // Use computed value
+        let val = computedVals[key];
+        const isTime = key === 'subjective_time' || key === 'objective_time';
+        if (isTime && val !== null && !isNaN(Number(val))) {
+          const unit = flexUnitMap[key] || 'minutes';
+          const n = Number(val);
+          val = unit==='hours' ? n*60 : unit==='seconds' ? n/60 : n;
+        }
+        out[key] = val;
+      } else {
+        const src = flexMapping[key];
+        if (!src) { out[key] = null; return; }
+        let val = row[src];
+        const isTime = key === 'subjective_time' || key === 'objective_time';
+        if (isTime && val !== null && val !== '' && !isNaN(Number(val))) {
+          const unit = flexUnitMap[key] || 'minutes';
+          const n = Number(val);
+          out[key] = unit==='hours' ? n*60 : unit==='seconds' ? n/60 : n;
+        } else {
+          out[key] = val;
+        }
+      }
+    });
+
+    // Add non-core computed columns (e.g. ethnicity from lookup)
+    const nonCoreCols = [...computedRoles].filter(r => !CORE_ROLES.includes(r) && r !== '__filter__');
+    nonCoreCols.forEach(role => {
+      if (computedVals[role] !== undefined) out[role] = computedVals[role];
+    });
+
+    // Copy demographic and extension columns (with any recoding applied)
+    // Guard: skip columns that are already set as computed roles, or don't exist in the raw row
+    const computedRoleNames = new Set(flexTransforms.filter(t=>t.role&&t.role!=='__filter__').map(t=>t.role));
+    Object.entries(flexVarCategories).forEach(([col, cat]) => {
+      if (cat !== 'ignored' && !computedRoleNames.has(col)) {
+        // Only include if the column actually exists in raw data
+        if (!(col in row)) return;
+        const recode = flexTransforms.find(t => t.type === 'recode' && t.column === col);
+        if (recode && recode.map) {
+          const raw = String(row[col]);
+          out[col] = recode.map[raw] !== undefined ? recode.map[raw] : row[col];
+        } else {
+          out[col] = row[col];
+        }
+      }
+    });
+
+    return out;
+  });
+
+  const demoCols = Object.entries(flexVarCategories).filter(([,v])=>v==='demo').map(([k])=>k);
+  const extCols2 = Object.entries(flexVarCategories).filter(([,v])=>v==='ext').map(([k])=>k);
+  // Non-core computed cols (e.g. ethnicity from lookup) — auto-add to demographic list
+  const nonCoreComputedFinal = [...computedRoles].filter(r => !CORE_ROLES.includes(r) && r !== '__filter__');
+  // Remove raw flag source columns from demo/ext lists (they are now folded into computed cols)
+  const _finalSourceCols = new Set(flexTransforms.filter(t=>t.type==='lookup'&&t.columns).flatMap(t=>t.columns));
+  const cleanedDemoCols = demoCols.filter(c => !_finalSourceCols.has(c) && !nonCoreComputedFinal.includes(c));
+  const cleanedExtCols2 = extCols2.filter(c => !_finalSourceCols.has(c));
+  const finalDemoCols = [...new Set([...cleanedDemoCols, ...nonCoreComputedFinal])];
+  const allFields = [...CORE_ROLES, ...finalDemoCols, ...cleanedExtCols2];
+
+  // Go to missing value screen (step 3) instead of directly to dashboard
+  showMissingScreen(converted, allFields, uploadedFiles.map(f=>f.name).join(' + '), finalDemoCols, cleanedExtCols2);
+}
+
+
+// ══════════════════════════════════════════════════════
+// MISSING VALUE SCREEN
+// ══════════════════════════════════════════════════════
+
+// State passed into missing screen
+let mvConvertedRows = [];
+let mvAllFields = [];
+let mvFilename = '';
+let mvFinalDemoCols = [];
+let mvFinalExtCols = [];
+let mvTotalDays = 0;
+
+// User's decisions (live)
+let mvDecision = {
+  mode: 'remove',   // 'remove' | 'split' | 'none'
+  logic: 'and',     // 'and' | 'or'
+  criteria: {
+    // key: variable role name, value: { enabled, threshold }
+    subjective_time:   { enabled: false, threshold: 1 },
+    objective_time:    { enabled: false, threshold: 1 },
+    subjective_pickups:{ enabled: false, threshold: 1 },
+    objective_pickups: { enabled: false, threshold: 1 },
+  }
+};
+
+const MV_VAR_LABELS = {
+  subjective_time:    { label: 'Self-reported Time',    sub: 'subjective_time' },
+  objective_time:     { label: 'Objective Time',        sub: 'objective_time' },
+  subjective_pickups: { label: 'Self-reported Pickups', sub: 'subjective_pickups' },
+  objective_pickups:  { label: 'Objective Pickups',     sub: 'objective_pickups' },
+};
+
+function showMissingScreen(convertedRows, allFields, filename, finalDemoCols, cleanedExtCols2) {
+  mvConvertedRows  = convertedRows;
+  mvAllFields      = allFields || [];
+  mvFilename       = filename;
+  mvFinalDemoCols  = finalDemoCols || [];
+  mvFinalExtCols   = cleanedExtCols2 || [];
+
+  // Detect total days from dataset
+  const uniqueDays = [...new Set(convertedRows.map(r => r.day).filter(Boolean))];
+  mvTotalDays = uniqueDays.length || 7;
+
+  // Reset criteria thresholds to sensible default (≥1 day)
+  Object.keys(mvDecision.criteria).forEach(k => {
+    mvDecision.criteria[k].threshold = Math.max(1, Math.ceil(mvTotalDays * 0.6));
+  });
+
+  document.getElementById('uploadScreen').style.display  = 'none';
+  document.getElementById('planScreen').style.display    = 'none';
+  document.getElementById('missingScreen').style.display = 'flex';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+
+  renderMissingHeatmap();
+  renderMissingCriteria();
+  updateMissingPreview();
+}
+
+// ── HEATMAP ─────────────────────────────────────────
+function renderMissingHeatmap() {
+  const rows = mvConvertedRows;
+  const vars = Object.keys(MV_VAR_LABELS).filter(v => mvAllFields.includes(v));
+  // Only include vars that exist in data
+  const activeVars = vars.filter(v => rows.some(r => r[v] !== null && r[v] !== undefined && r[v] !== ''));
+
+  // Group rows by participant
+  const participants = [...new Set(rows.map(r => r.participant_id))];
+
+  // For each participant × var, count valid days
+  const counts = {}; // pid -> { var -> count }
+  participants.forEach(pid => {
+    counts[pid] = {};
+    activeVars.forEach(v => {
+      const pidRows = rows.filter(r => r.participant_id === pid);
+      counts[pid][v] = pidRows.filter(r => r[v] !== null && r[v] !== undefined && r[v] !== '' && !isNaN(Number(r[v]))).length;
+    });
+  });
+
+  // Build table
+  let html = '<table class="mv-heatmap-table"><thead><tr>';
+  html += '<th>Participant</th>';
+  activeVars.forEach(v => { html += `<th class="var-header">${MV_VAR_LABELS[v].label.replace(' ',' ')}</th>`; });
+  html += '</tr></thead><tbody>';
+
+  participants.forEach(pid => {
+    html += `<tr><td class="pid-cell">${pid}</td>`;
+    activeVars.forEach(v => {
+      const c = counts[pid][v];
+      const ratio = mvTotalDays > 0 ? c / mvTotalDays : 0;
+      const bg = ratio === 0 ? '#f0e0d8'
+               : ratio < 0.4 ? '#e8c4a8'
+               : ratio < 0.8 ? '#c8deb8'
+               : '#8aba72';
+      const textCol = ratio < 0.4 ? '#7a3a1a' : '#1a3a0a';
+      html += `<td><span class="mv-heatmap-cell" style="background:${bg};color:${textCol}">${c}/${mvTotalDays}</span></td>`;
+    });
+    html += '</tr>';
+  });
+  html += '</tbody></table>';
+  document.getElementById('missingHeatmap').innerHTML = html;
+}
+
+// ── CRITERIA ROWS ────────────────────────────────────
+function renderMissingCriteria() {
+  const vars = Object.keys(MV_VAR_LABELS);
+  // Show a variable if it has at least some data in the converted rows
+  // Fall back to showing all 4 if we can't determine (e.g. standard mode)
+  const activeVars = vars.filter(v => {
+    if (!mvConvertedRows.length) return true;
+    return mvConvertedRows.some(r => {
+      const val = r[v];
+      return val !== null && val !== undefined && val !== '';
+    });
+  });
+  const container = document.getElementById('missingCriteriaRows');
+  container.innerHTML = '';
+
+  activeVars.forEach(varKey => {
+    const meta  = MV_VAR_LABELS[varKey];
+    const state = mvDecision.criteria[varKey];
+    const row = document.createElement('div');
+    row.className = 'mv-criteria-row ' + (state.enabled ? 'active' : 'inactive');
+    row.id = 'mv-row-' + varKey;
+
+    row.innerHTML = `
+      <input type="checkbox" id="mv-check-${varKey}" ${state.enabled ? 'checked' : ''}
+        style="accent-color:var(--accent);flex-shrink:0;cursor:pointer;"
+        onchange="mvToggleCriteria('${varKey}', this.checked)">
+      <div class="mv-criteria-label">
+        <strong>${meta.label}</strong>
+        <span>Minimum valid days required</span>
+      </div>
+      <div class="mv-threshold-wrap">
+        <input type="range" id="mv-slider-${varKey}"
+          min="1" max="${mvTotalDays}" value="${state.threshold}"
+          ${state.enabled ? '' : 'disabled'}
+          oninput="mvUpdateThreshold('${varKey}', this.value)">
+        <span class="mv-threshold-val" id="mv-val-${varKey}">≥ ${state.threshold} day${state.threshold>1?'s':''}</span>
+      </div>`;
+    container.appendChild(row);
+  });
+}
+
+function mvToggleCriteria(varKey, enabled) {
+  mvDecision.criteria[varKey].enabled = enabled;
+  const row = document.getElementById('mv-row-' + varKey);
+  row.className = 'mv-criteria-row ' + (enabled ? 'active' : 'inactive');
+  const slider = document.getElementById('mv-slider-' + varKey);
+  if (slider) slider.disabled = !enabled;
+  updateMissingPreview();
+}
+
+function mvUpdateThreshold(varKey, val) {
+  const n = parseInt(val);
+  mvDecision.criteria[varKey].threshold = n;
+  const el = document.getElementById('mv-val-' + varKey);
+  if (el) el.textContent = `≥ ${n} day${n>1?'s':''}`;
+  updateMissingPreview();
+}
+
+// ── LIVE PREVIEW ─────────────────────────────────────
+function computeExcluded() {
+  const mode = document.querySelector('input[name=mvMode]:checked')?.value || 'none';
+  const logic = document.querySelector('input[name=mvLogic]:checked')?.value || 'and';
+  if (mode === 'none') return new Set();
+
+  // Always sync criteria state from DOM (source of truth)
+  Object.keys(mvDecision.criteria).forEach(varKey => {
+    const checkbox = document.getElementById('mv-check-' + varKey);
+    const slider   = document.getElementById('mv-slider-' + varKey);
+    if (checkbox) mvDecision.criteria[varKey].enabled   = checkbox.checked;
+    if (slider)   mvDecision.criteria[varKey].threshold = parseInt(slider.value);
+  });
+
+  const enabledKeys = Object.entries(mvDecision.criteria)
+    .filter(([k, v]) => v.enabled)
+    .map(([k, v]) => ({ key: k, threshold: v.threshold }));
+
+
+  if (!enabledKeys.length) return new Set();
+
+  const rows = mvConvertedRows;
+  const participantIds = [...new Set(rows.map(r => r.participant_id))];
+  const excluded = new Set();
+
+  participantIds.forEach(pid => {
+    const pidRows = rows.filter(r => r.participant_id === pid);
+    const fails = enabledKeys.map(({ key, threshold }) => {
+      const validDays = pidRows.filter(r => {
+        const v = r[key];
+        if (v === null || v === undefined || v === '') return false;
+        const n = Number(v);
+        return !isNaN(n) && isFinite(n) && n !== 0;  // 0 treated as missing
+      }).length;
+      return validDays < threshold;
+    });
+    // AND: excluded if fails ANY criterion (must meet ALL to stay); OR: excluded only if fails ALL
+    const shouldExclude = logic === 'and' ? fails.some(Boolean) : fails.every(Boolean);
+    if (shouldExclude) excluded.add(pid);
+  });
+  return excluded;
+}
+
+function updateMissingPreview() {
+  // Always sync decision state fresh from DOM
+  const mode  = document.querySelector('input[name=mvMode]:checked')?.value  || 'remove';
+  const logic = document.querySelector('input[name=mvLogic]:checked')?.value || 'and';
+  mvDecision.mode  = mode;
+  mvDecision.logic = logic;
+
+  const excluded = computeExcluded();
+  const participants = [...new Set(mvConvertedRows.map(r => r.participant_id))];
+  const total   = participants.length;
+  const kept    = total - excluded.size;
+
+  // Stats
+  const statsEl = document.getElementById('mvPreviewStats');
+  statsEl.innerHTML = `
+    <div class="mv-stat-card">
+      <div class="mv-stat-val">${total}</div>
+      <div class="mv-stat-label">Total participants</div>
+    </div>
+    <div class="mv-stat-card ${excluded.size > 0 ? 'highlight' : ''}">
+      <div class="mv-stat-val">${excluded.size}</div>
+      <div class="mv-stat-label">To be excluded</div>
+    </div>
+    <div class="mv-stat-card">
+      <div class="mv-stat-val">${kept}</div>
+      <div class="mv-stat-label">${mode === 'split' ? 'In complete-cases set' : mode === 'remove' ? 'Final analytic N' : 'Participants (no exclusion)'}</div>
+    </div>`;
+
+  // Excluded list
+  const listEl  = document.getElementById('mvExcludedList');
+  const emptyEl = document.getElementById('mvExcludedEmpty');
+  if (excluded.size === 0) {
+    listEl.innerHTML = '';
+    emptyEl.style.display = 'block';
+  } else {
+    emptyEl.style.display = 'none';
+    listEl.innerHTML = [...excluded].sort().map(pid =>
+      `<div style="padding:2px 0;border-bottom:1px solid var(--border-light)">${pid}</div>`
+    ).join('');
+  }
+
+  // Decision summary
+  updateMvSummary(excluded, total, kept, mode);
+}
+
+function updateMvSummary(excluded, total, kept, mode) {
+  const logic = mvDecision.logic;
+  const enabledKeys = Object.entries(mvDecision.criteria)
+    .filter(([k, v]) => v.enabled);
+
+  let summaryText = '';
+  if (mode === 'none' || enabledKeys.length === 0) {
+    summaryText = `All ${total} participants were retained in the analytic sample without exclusion based on data completeness.`;
+  } else {
+    const criteriaDesc = enabledKeys.map(([k, v]) =>
+      `${MV_VAR_LABELS[k].label.toLowerCase()} (minimum ${v.threshold} valid day${v.threshold>1?'s':''})`
+    ).join(logic === 'and' ? ' or ' : ' and ');
+
+    const logicWord = logic === 'and'
+      ? 'any of the following criteria'
+      : 'all of the following criteria';
+
+    if (mode === 'remove') {
+      summaryText = `Participants were excluded from the analysis if they failed to meet ${logicWord}: ${criteriaDesc}. ` +
+        `This resulted in the exclusion of ${excluded.size} participant${excluded.size !== 1 ? 's' : ''} (N = ${excluded.size}), ` +
+        `yielding a final analytic sample of N = ${kept}.`;
+    } else {
+      summaryText = `To examine the potential influence of missing data, analyses were conducted on two samples. ` +
+        `The full sample comprised all ${total} participants. ` +
+        `A complete-cases sample (N = ${kept}) was constructed by excluding ${excluded.size} participant${excluded.size !== 1 ? 's' : ''} ` +
+        `who failed to meet ${logicWord}: ${criteriaDesc}.`;
+    }
+  }
+  document.getElementById('mvSummaryText').textContent = summaryText;
+}
+
+function copyMvSummary() {
+  const text = document.getElementById('mvSummaryText').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = event.target;
+    btn.textContent = 'Copied!';
+    setTimeout(() => { btn.textContent = 'Copy text'; }, 1500);
+  });
+}
+
+function backFromMissing() {
+  document.getElementById('missingScreen').style.display = 'none';
+  if (isFlexibleMode) {
+    document.getElementById('planScreen').style.display = 'flex';
+    const prevPanel = document.getElementById('previewPanel');
+    if (prevPanel) { renderPreview(); prevPanel.style.display = 'block'; }
+  } else {
+    document.getElementById('uploadScreen').style.display = 'flex';
+    renderFileList();
+  }
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function confirmMissing() {
+  // Always read mode and logic fresh from DOM at the moment of confirmation
+  const mode  = document.querySelector('input[name=mvMode]:checked')?.value  || 'none';
+  const logic = document.querySelector('input[name=mvLogic]:checked')?.value || 'and';
+
+  // Re-sync mvDecision so computeExcluded reads correctly
+  mvDecision.mode  = mode;
+  mvDecision.logic = logic;
+
+  // Sync criteria enabled/threshold state from DOM (source of truth at confirm time)
+  Object.keys(mvDecision.criteria).forEach(varKey => {
+    const checkbox = document.getElementById('mv-check-' + varKey);
+    const slider   = document.getElementById('mv-slider-' + varKey);
+    if (checkbox) mvDecision.criteria[varKey].enabled   = checkbox.checked;
+    if (slider)   mvDecision.criteria[varKey].threshold = parseInt(slider.value);
+  });
+
+  const excluded = computeExcluded();
+
+
+  let rowsForDashboard = mvConvertedRows;
+  let splitRows = null;
+
+  if (mode === 'remove' && excluded.size > 0) {
+    rowsForDashboard = mvConvertedRows.filter(r => !excluded.has(r.participant_id));
+  } else if (mode === 'split' && excluded.size > 0) {
+    splitRows = mvConvertedRows.filter(r => !excluded.has(r.participant_id));
+  } else {
+  }
+
+  document.getElementById('missingScreen').style.display = 'none';
+  // In standard mode overrideDemoCols/overrideExtCols are undefined — initDashboard handles that
+  initDashboard(rowsForDashboard, mvAllFields, mvFilename,
+    mvFinalDemoCols.length ? mvFinalDemoCols : undefined,
+    mvFinalExtCols.length  ? mvFinalExtCols  : undefined,
+    splitRows);
+}
+
+
+// ══════════════════════════════════
+// CONSTANTS
+// ══════════════════════════════════
+const CORE_COLS = ['participant_id','day','subjective_time','objective_time','subjective_pickups','objective_pickups'];
+const DEMO_COLS = ['gender','age','ethnicity','education','income','occupation','country','language','marital_status'];
+const DAY_NAME_MAP = {1:'Day 1',2:'Day 2',3:'Day 3',4:'Day 4',5:'Day 5',6:'Day 6',7:'Day 7',
+  monday:'Mon',tuesday:'Tue',wednesday:'Wed',thursday:'Thu',friday:'Fri',saturday:'Sat',sunday:'Sun'};
+
+// Chart color palette
+const COLORS = {
+  subj: '#c0341a', obj: '#1a52a0', over: '#c0341a', under: '#1a52a0', exact: '#2a7a52',
+  ext: ['#6b46a8','#2a7a52','#a07020','#1a52a0','#c0541a','#2a6a8a','#7a3a5a']
+};
+
+// ══════════════════════════════════
+// STATE
+// ══════════════════════════════════
+let parsedData = [];       // raw rows
+let participants = [];     // unique participant ids
+let dayLabels = [];        // ordered day labels
+let extCols = [];          // extension column names
+let detectedDemoCols = []; // demo cols present in data
+let chartRegistry = {};    // track Chart.js instances by id
+
+// ══════════════════════════════════
+// UPLOAD
+// ══════════════════════════════════
+// Upload event listeners handled in flexible mode section above
+
+function showError(msg) {
+  const el = document.getElementById('uploadError');
+  el.textContent = msg; el.style.display = 'block';
+}
+
+// processFile replaced by handleNewFiles + proceedWithFiles
+
+function validateCSV(rows, fields) {
+  const missing = CORE_COLS.filter(c => !fields.includes(c));
+  if (missing.length) return `Missing required columns: ${missing.join(', ')}`;
+  if (rows.length === 0) return 'CSV file appears to be empty.';
+  return null;
+}
+
+// ══════════════════════════════════
+// INIT DASHBOARD
+// ══════════════════════════════════
+function switchSplitView(mode, skipRender) {
+  const btnFull  = document.getElementById('splitBtnFull');
+  const btnClean = document.getElementById('splitBtnClean');
+  const isFull = (mode === 'full');
+
+  // Update button styles
+  btnFull.style.background   = isFull ? 'var(--accent)' : 'var(--surface)';
+  btnFull.style.color        = isFull ? '#fff' : 'var(--text-dim)';
+  btnFull.style.borderColor  = isFull ? 'var(--accent)' : 'var(--border)';
+  btnClean.style.background  = isFull ? 'var(--surface)' : 'var(--accent)';
+  btnClean.style.color       = isFull ? 'var(--text-dim)' : '#fff';
+  btnClean.style.borderColor = isFull ? 'var(--border)' : 'var(--accent)';
+
+  if (skipRender) return;
+
+  // Swap parsedData and re-render all charts — no full initDashboard re-run
+  const newRows = isFull ? window._splitFullRows : window._splitCleanRows;
+  if (!newRows) return;
+
+  parsedData = newRows;
+  // Update participants list for individual tab
+  participants = [...new Set(newRows.map(r => String(r.participant_id)))].sort((a,b) => {
+    const na = parseFloat(a), nb = parseFloat(b);
+    return isNaN(na)||isNaN(nb) ? a.localeCompare(b) : na-nb;
+  });
+  // Update day labels
+  dayLabels = sortDays([...new Set(newRows.map(r => r.day))]);
+
+  // Re-render all three pages
+  renderOverview();
+  renderIndividual();
+  if (detectedDemoCols.length > 0) renderDemographic();
+}
+
+function initDashboard(rows, fields, filename, overrideDemoCols, overrideExtCols, splitRows) {
+  parsedData = rows;
+  // Split view support — store both datasets permanently
+  // Only update the stored copies on first init (not on chart re-renders via switchSplitView)
+  window._splitFullRows  = rows;
+  window._splitCleanRows = splitRows || null;
+  // Show toggle only when we genuinely have two different datasets
+  const toggleWrap = document.getElementById('splitToggleWrap');
+  const hasSplit = splitRows && splitRows.length > 0 && splitRows.length < rows.length;
+  toggleWrap.style.display = hasSplit ? 'flex' : 'none';
+  if (hasSplit) {
+    // Set toggle button to "Full dataset" active state without re-rendering
+    switchSplitView('full', true);
+  }
+
+  // Detect column types — use overrides if provided (flexible mode)
+  if (overrideDemoCols !== undefined) {
+    // Filter to only columns that actually exist as keys in the row data
+    detectedDemoCols = overrideDemoCols.filter(c =>
+      fields.includes(c) && rows.some(r => r[c] !== null && r[c] !== undefined && r[c] !== '')
+    );
+  } else {
+    detectedDemoCols = DEMO_COLS.filter(c => fields.includes(c));
+  }
+  if (overrideExtCols !== undefined) {
+    extCols = overrideExtCols;
+  } else {
+    extCols = fields.filter(c => !CORE_COLS.includes(c) && !DEMO_COLS.includes(c));
+    // Only keep numeric extension cols
+    extCols = extCols.filter(col => rows.some(r => r[col] !== null && r[col] !== '' && !isNaN(Number(r[col]))));
+  }
+
+  // Participants
+  participants = [...new Set(rows.map(r => String(r.participant_id)))].sort((a,b) => {
+    const na = parseFloat(a), nb = parseFloat(b);
+    return isNaN(na) || isNaN(nb) ? a.localeCompare(b) : na - nb;
+  });
+
+  // Day labels: detect format and sort
+  const rawDays = [...new Set(rows.map(r => r.day))];
+  dayLabels = sortDays(rawDays);
+
+  // Show dashboard
+  document.getElementById('uploadScreen').style.display = 'none';
+  document.getElementById('planScreen').style.display = 'none';
+  document.getElementById('dashboard').style.display = 'block';
+  document.getElementById('navFilename').textContent = filename;
+  // Always show Back button — goes to plan screen (flexible) or upload screen (standard)
+  document.getElementById('navBackBtn').style.display = 'inline-block';
+  document.getElementById('navBackBtn').textContent = isFlexibleMode ? '← Back to mapping' : '← Back to upload';
+
+  // Demo tab
+  if (detectedDemoCols.length > 0) {
+    document.getElementById('demoTab').style.display = '';
+    const demoSel = document.getElementById('demoVarSelect');
+    demoSel.innerHTML = detectedDemoCols.map(c => `<option value="${c}">${c}</option>`).join('');
+  }
+
+  // Individual selector
+  const ppSel = document.getElementById('ppSelect');
+  ppSel.innerHTML = participants.map(p => `<option value="${p}">${p}</option>`).join('');
+
+  // Render pages
+  renderOverview();
+  renderIndividual();
+  if (detectedDemoCols.length > 0) renderDemographic();
+}
+
+function resetDashboard() {
+  parsedData = []; participants = []; dayLabels = []; extCols = []; detectedDemoCols = [];
+  uploadedFiles = []; mergedRows = []; mergedFields = []; mergePlan = null;
+  flexMapping = {}; flexVarCategories = {}; flexUnitMap = {}; flexTransforms = [];
+  isFlexibleMode = false;
+  window._splitFullRows = null; window._splitCleanRows = null;
+  mvConvertedRows = []; mvAllFields = []; mvFilename = ''; mvFinalDemoCols = []; mvFinalExtCols = [];
+  const toggleWrap = document.getElementById('splitToggleWrap');
+  if (toggleWrap) toggleWrap.style.display = 'none';
+  const missingScreen = document.getElementById('missingScreen');
+  if (missingScreen) missingScreen.style.display = 'none';
+  Object.values(chartRegistry).forEach(c => { try { c.destroy(); } catch(e){} });
+  chartRegistry = {};
+  document.getElementById('planScreen').style.display = 'none';
+  document.getElementById('uploadScreen').style.display = 'flex';
+  document.getElementById('uploadBox').style.display = '';
+  document.getElementById('fileList').style.display = 'none';
+  const addMoreEl = document.getElementById('addMoreBtn'); if (addMoreEl) addMoreEl.style.display = 'none';
+  document.getElementById('proceedBtn').style.display = 'none';
+  document.getElementById('dashboard').style.display = 'none';
+  document.getElementById('uploadError').style.display = 'none';
+  document.getElementById('navBackBtn').style.display = 'none';
+  const prevPanel = document.getElementById('previewPanel'); if (prevPanel) prevPanel.style.display = 'none';
+  document.getElementById('fileInput').value = '';
+  switchPage('overview');
+}
+
+// ══════════════════════════════════
+// NAV
+// ══════════════════════════════════
+function switchPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  document.querySelector(`.nav-tab[onclick="switchPage('${name}')"]`).classList.add('active');
+}
+
+// ══════════════════════════════════
+// DAY UTILITIES
+// ══════════════════════════════════
+function sortDays(rawDays) {
+  const dayOrder = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'];
+  if (rawDays.every(d => !isNaN(Number(d)))) {
+    return rawDays.map(Number).sort((a,b)=>a-b).map(d => ({ raw: d, label: `Day ${d}` }));
+  }
+  if (rawDays.every(d => dayOrder.includes(String(d).toLowerCase()))) {
+    return rawDays.sort((a,b) => dayOrder.indexOf(a.toLowerCase()) - dayOrder.indexOf(b.toLowerCase()))
+      .map(d => ({ raw: d, label: d.charAt(0).toUpperCase() + d.slice(1,3) }));
+  }
+  // Assume dates
+  return rawDays.sort().map(d => ({ raw: d, label: String(d).slice(5) })); // MM-DD
+}
+
+function getDayLabel(raw) {
+  const found = dayLabels.find(d => String(d.raw) === String(raw));
+  return found ? found.label : String(raw);
+}
+
+function getParticipantRows(pid) {
+  return parsedData.filter(r => String(r.participant_id) === String(pid));
+}
+
+// ══════════════════════════════════
+// STATS HELPERS
+// ══════════════════════════════════
+function calcError(subj, obj) {
+  if (subj === null || obj === null || isNaN(subj) || isNaN(obj) || obj === 0) return null;
+  const e = (subj - obj) / obj * 100;
+  return Math.abs(e) > 1500 ? null : Math.round(e * 10) / 10;
+}
+
+function mean(arr) {
+  const valid = arr.filter(v => v !== null && !isNaN(v));
+  return valid.length ? valid.reduce((a,b)=>a+b,0)/valid.length : null;
+}
+
+function renderSummaryStrip(containerId, rows) {
+  const subjs = rows.map(r => Number(r.subjective_time)).filter(v => !isNaN(v) && v !== null);
+  const objs  = rows.map(r => Number(r.objective_time)).filter(v => !isNaN(v) && v !== null);
+  const errors = rows.map(r => calcError(Number(r.subjective_time), Number(r.objective_time))).filter(v => v !== null);
+
+  const avgS = mean(subjs), avgO = mean(objs), avgE = mean(errors);
+  let worstDay = '—', worstErr = '—', worstClass = '';
+
+  // find worst error day
+  let maxAbs = 0;
+  dayLabels.forEach(dl => {
+    const dayRows = rows.filter(r => String(r.day) === String(dl.raw));
+    const dayErrors = dayRows.map(r => calcError(Number(r.subjective_time), Number(r.objective_time))).filter(v=>v!==null);
+    const dayAvgErr = mean(dayErrors);
+    if (dayAvgErr !== null && Math.abs(dayAvgErr) > maxAbs) {
+      maxAbs = Math.abs(dayAvgErr);
+      worstDay = dl.label;
+      worstErr = (dayAvgErr > 0 ? '+' : '') + Math.round(dayAvgErr) + '%';
+      worstClass = dayAvgErr > 5 ? 'col-over' : dayAvgErr < -5 ? 'col-under' : 'col-exact';
+    }
+  });
+
+  const errClass = avgE !== null ? (avgE > 5 ? 'col-over' : avgE < -5 ? 'col-under' : 'col-exact') : '';
+  const errDir = avgE !== null ? (avgE > 5 ? 'tends to overestimate' : avgE < -5 ? 'tends to underestimate' : 'fairly accurate') : '—';
+
+  const nCard = containerId === 'ovSummary'
+    ? `<div class="stat-card"><span class="stat-label">Sample Size</span><span class="stat-value">${participants.length}</span><span class="stat-sub">participants</span></div>`
+    : '';
+
+  document.getElementById(containerId).innerHTML = `
+    <div class="stat-card"><span class="stat-label">Avg Subjective / day</span><span class="stat-value">${avgS !== null ? Math.round(avgS)+' min' : '—'}</span><span class="stat-sub">minutes self-reported</span></div>
+    <div class="stat-card"><span class="stat-label">Avg Objective / day</span><span class="stat-value">${avgO !== null ? Math.round(avgO)+' min' : '—'}</span><span class="stat-sub">minutes screen time</span></div>
+    <div class="stat-card"><span class="stat-label">Avg Estimation Error</span><span class="stat-value ${errClass}">${avgE !== null ? (avgE>0?'+':'')+Math.round(avgE)+'%' : '—'}</span><span class="stat-sub">${errDir}</span></div>
+    <div class="stat-card"><span class="stat-label">Worst Error Day</span><span class="stat-value">${worstDay}</span><span class="stat-sub ${worstClass}">${worstErr}</span></div>
+    ${nCard}
+  `;
+}
+
+// ══════════════════════════════════
+// CHART HELPERS
+// ══════════════════════════════════
+function destroyChart(id) {
+  if (chartRegistry[id]) { try { chartRegistry[id].destroy(); } catch(e){} delete chartRegistry[id]; }
+}
+
+function makeChart(id, config) {
+  destroyChart(id);
+  const ctx = document.getElementById(id);
+  if (!ctx) return;
+  chartRegistry[id] = new Chart(ctx, config);
+}
+
+function baseScales(yLabel, yMin, yMax) {
+  const y = { grid:{color:'#d6cfc2'}, ticks:{color:'#7a6f62',font:{family:'DM Mono',size:10}} };
+  if (yMin !== undefined) y.min = yMin;
+  if (yMax !== undefined) y.max = yMax;
+  if (yLabel) y.title = {display:true,text:yLabel,color:'#7a6f62',font:{family:'DM Mono',size:9}};
+  return {
+    x: { grid:{color:'#d6cfc2'}, ticks:{color:'#7a6f62',font:{family:'DM Mono',size:10}} },
+    y
+  };
+}
+
+function baseOpts(yLabel, yMin, yMax) {
+  return {
+    responsive:true, maintainAspectRatio:false,
+    plugins:{ legend:{display:false}, tooltip:{backgroundColor:'#faf7f2',titleColor:'#1a1714',bodyColor:'#7a6f62',borderColor:'#d6cfc2',borderWidth:1} },
+    scales: baseScales(yLabel, yMin, yMax)
+  };
+}
+
+function lineDataset(label, data, color) {
+  return { label, data, borderColor:color, backgroundColor:color+'14', tension:0.3, pointBackgroundColor:color, pointRadius:3.5, borderWidth:2 };
+}
+
+// Error bars renderer (reusable)
+function renderErrorBarsEl(container, dayLs, errVals) {
+  container.innerHTML = '<div class="error-zero-line"></div>';
+  const valid = errVals.filter(e=>e!==null&&Math.abs(e)<=1500);
+  const maxAbs = valid.length ? Math.max(...valid.map(Math.abs), 10) : 100;
+  const dispMax = Math.min(maxAbs*1.15, 600);
+
+  dayLs.forEach((dl, i) => {
+    const err = errVals[i];
+    const group = document.createElement('div');
+    group.className = 'error-bar-group';
+    if (err === null || Math.abs(err) > 1500) {
+      group.innerHTML = `<div class="bar-top-half"></div><div class="bar-bottom-half" style="justify-content:center;align-items:center"><span style="color:var(--text-dim);font-size:9px">n/a</span></div><div class="bar-day">${dl}</div>`;
+    } else {
+      const isOver=err>5, isUnder=err<-5;
+      const color = isOver?'var(--over)':isUnder?'var(--under)':'var(--exact)';
+      const sign = err>0?'+':'';
+      const barH = Math.max(Math.round(Math.min(Math.abs(err),dispMax)/dispMax*36),2);
+      if (isOver) {
+        group.innerHTML = `<div class="bar-top-half"><span class="bar-pct" style="color:${color}">${sign}${Math.round(err)}%</span><div class="bar-rect" style="height:${barH}px;background:${color};opacity:0.75"></div></div><div class="bar-bottom-half"></div><div class="bar-day">${dl}</div>`;
+      } else if (isUnder) {
+        group.innerHTML = `<div class="bar-top-half"></div><div class="bar-bottom-half"><div class="bar-rect" style="height:${barH}px;background:${color};opacity:0.75"></div><span class="bar-pct" style="color:${color}">${sign}${Math.round(err)}%</span></div><div class="bar-day">${dl}</div>`;
+      } else {
+        group.innerHTML = `<div class="bar-top-half"></div><div class="bar-bottom-half" style="justify-content:center"><span class="bar-pct" style="color:${color}">${sign}${Math.round(err)}%</span></div><div class="bar-day">${dl}</div>`;
+      }
+    }
+    container.appendChild(group);
+  });
+}
+
+// Build a dual panel (line + error bars) and insert into parent
+function buildDualPanel(parentEl, title, labels, subjVals, objVals, errVals, chartId, yLabel, legend2, pickupNote) {
+  const panel = document.createElement('div');
+  panel.className = 'dual-panel';
+  panel.innerHTML = `
+    <div class="line-area">
+      <div class="panel-title">${title}</div>
+      ${pickupNote ? `<div class="pickup-note">${pickupNote}</div>` : ''}
+      <div class="legend">
+        <div class="legend-item"><div class="legend-dot" style="background:var(--over)"></div>Self-reported</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--under)"></div>${legend2}</div>
+      </div>
+      <div class="chart-wrap"><canvas id="${chartId}"></canvas></div>
+    </div>
+    <div class="error-area">
+      <div class="error-label">Estimation Error %</div>
+      <div class="error-bars" id="${chartId}_err"><div class="error-zero-line"></div></div>
+    </div>
+  `;
+  parentEl.appendChild(panel);
+
+  // Draw after DOM insertion
+  requestAnimationFrame(() => {
+    makeChart(chartId, {
+      type:'line',
+      data:{ labels, datasets:[ lineDataset('Subjective', subjVals, COLORS.subj), lineDataset('Objective', objVals, COLORS.obj) ] },
+      options: baseOpts(yLabel)
+    });
+    const errEl = document.getElementById(chartId+'_err');
+    if (errEl) renderErrorBarsEl(errEl, labels, errVals);
+  });
+}
+
+// Extension charts
+function buildExtCharts(containerId, labels, rows, prefix) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = '';
+  if (extCols.length === 0) return;
+
+  const grid = document.createElement('div');
+  grid.className = 'ext-charts-grid';
+  container.appendChild(grid);
+
+  extCols.forEach((col, ci) => {
+    const vals = labels.map(lbl => {
+      const dayRaw = dayLabels.find(d=>d.label===lbl)?.raw;
+      const dayRows = rows.filter(r=>String(r.day)===String(dayRaw));
+      const nums = dayRows.map(r=>Number(r[col])).filter(v=>!isNaN(v));
+      return nums.length ? mean(nums) : null;
+    });
+
+    const panel = document.createElement('div');
+    panel.className = 'chart-panel';
+    const cid = `${prefix}_ext_${ci}`;
+    panel.innerHTML = `<div class="panel-title">${col}</div><div class="chart-wrap-sm"><canvas id="${cid}"></canvas></div>`;
+    grid.appendChild(panel);
+
+    requestAnimationFrame(() => {
+      makeChart(cid, {
+        type:'line',
+        data:{ labels, datasets:[{ label:col, data:vals, borderColor:COLORS.ext[ci%COLORS.ext.length], backgroundColor:COLORS.ext[ci%COLORS.ext.length]+'14', tension:0.3, pointRadius:3, borderWidth:2 }] },
+        options: baseOpts(col)
+      });
+    });
+  });
+}
+
+// ══════════════════════════════════
+// OVERVIEW PAGE
+// ══════════════════════════════════
+function renderOverview() {
+  renderSummaryStrip('ovSummary', parsedData);
+
+  const labels = dayLabels.map(d=>d.label);
+
+  const avgByDay = (col) => dayLabels.map(dl => {
+    const vals = parsedData.filter(r=>String(r.day)===String(dl.raw)).map(r=>Number(r[col])).filter(v=>!isNaN(v));
+    return mean(vals);
+  });
+
+  const subjByDay = avgByDay('subjective_time');
+  const objByDay  = avgByDay('objective_time');
+  const errByDay  = subjByDay.map((s,i)=>calcError(s,objByDay[i]));
+  const pkSubj    = avgByDay('subjective_pickups');
+  const pkObj     = avgByDay('objective_pickups');
+  const pkErr     = pkSubj.map((s,i)=>calcError(s,pkObj[i]));
+
+  const grid = document.getElementById('ovCharts');
+  grid.innerHTML = '';
+  buildDualPanel(grid, 'Screen Time · All Participants (avg)', labels, subjByDay, objByDay, errByDay, 'ov_time', 'minutes', 'Objective (min)');
+  buildDualPanel(grid, 'Phone Pickups · All Participants (avg)', labels, pkSubj, pkObj, pkErr, 'ov_pickups', 'pickups', 'Objective (iOS screen wakes)', 'Subjective = self-estimated · Objective = iOS screen wakes. Definitions differ.');
+
+  buildExtCharts('ovExtCharts', labels, parsedData, 'ov');
+
+  // Reset AI
+  document.getElementById('ovAiContent').innerHTML = '<span class="ai-placeholder">Click Generate for an AI interpretation of the overall dataset patterns.</span>';
+  document.getElementById('ovAiBtn').textContent = 'Generate';
+}
+
+// ══════════════════════════════════
+// INDIVIDUAL PAGE
+// ══════════════════════════════════
+function renderIndividual() {
+  // Always sync dropdown options to current participants list
+  const ppSel = document.getElementById('ppSelect');
+  const prevPid = ppSel.value;
+  ppSel.innerHTML = participants.map(p => `<option value="${p}">${p}</option>`).join('');
+  // Restore previous selection if still valid, otherwise first participant is auto-selected
+  if (participants.includes(prevPid)) ppSel.value = prevPid;
+
+  const pid = ppSel.value;
+  if (!pid) return;
+
+  const rows = getParticipantRows(pid);
+  renderSummaryStrip('indSummary', rows);
+  renderDayStrip(pid, rows);
+
+  // Charts
+  const presentDays = dayLabels.filter(dl => rows.some(r=>String(r.day)===String(dl.raw)));
+  const labels = presentDays.map(d=>d.label);
+
+  const byDay = (col) => presentDays.map(dl => {
+    const r = rows.find(r2=>String(r2.day)===String(dl.raw));
+    return r && r[col] !== null && r[col] !== '' ? Number(r[col]) : null;
+  });
+
+  const subjD = byDay('subjective_time'), objD = byDay('objective_time');
+  const errD  = subjD.map((s,i)=>calcError(s,objD[i]));
+  const pkS   = byDay('subjective_pickups'), pkO = byDay('objective_pickups');
+  const pkErr = pkS.map((s,i)=>calcError(s,pkO[i]));
+
+  const grid = document.getElementById('indCharts');
+  grid.innerHTML = '';
+  buildDualPanel(grid, 'Screen Time', labels, subjD, objD, errD, 'ind_time', 'minutes', 'Objective (min)');
+  buildDualPanel(grid, 'Phone Pickups', labels, pkS, pkO, pkErr, 'ind_pickups', 'pickups', 'Objective (iOS screen wakes)', 'Subjective = self-estimated · Objective = iOS screen wakes. Definitions differ.');
+
+  buildExtCharts('indExtCharts', labels, rows, 'ind');
+
+  // Reset AI
+  document.getElementById('indAiContent').innerHTML = '<span class="ai-placeholder">Click Generate to get an AI interpretation of this participant\'s bias patterns.</span>';
+  document.getElementById('indAiBtn').textContent = 'Generate';
+  document.getElementById('indDetailPanel').style.display = 'none';
+}
+
+function renderDayStrip(pid, rows) {
+  const strip = document.getElementById('indDayStrip');
+  strip.innerHTML = '';
+  dayLabels.forEach(dl => {
+    const row = rows.find(r=>String(r.day)===String(dl.raw));
+    const cell = document.createElement('div');
+    const hasData = row && row.subjective_time !== null && row.subjective_time !== '';
+    cell.className = 'day-cell' + (hasData ? '' : ' missing');
+
+    if (hasData) {
+      const smin = Number(row.subjective_time), omin = Number(row.objective_time);
+      const err = calcError(smin, omin);
+      const cls = err===null?'':err>5?'over':err<-5?'under':'exact';
+      const sign = err!==null&&err>0?'+':'';
+      cell.innerHTML = `
+        <div class="day-name">${dl.label}</div>
+        <div class="day-subj">${Math.round(smin)}</div><div class="day-label">self-reported min</div>
+        <div class="day-obj" style="margin-top:5px">${!isNaN(omin)?Math.round(omin):'—'}</div><div class="day-label">objective min</div>
+        ${err!==null?`<div class="day-error ${cls}">${sign}${Math.round(err)}%</div>`:''}`;
+      cell.onclick = () => {
+        document.querySelectorAll('.day-cell').forEach(c=>c.classList.remove('active'));
+        cell.classList.add('active');
+        renderDayDetail(row);
+      };
+    } else {
+      cell.innerHTML = `<div class="day-name">${dl.label}</div><div style="color:var(--text-dim);font-size:10px;margin-top:10px">no data</div>`;
+    }
+    strip.appendChild(cell);
+  });
+}
+
+function renderDayDetail(row) {
+  const panel = document.getElementById('indDetailPanel');
+  const inner = document.getElementById('indDetailInner');
+  inner.innerHTML = '';
+  panel.style.display = 'block';
+
+  // Show all extension columns for this day
+  const extData = extCols.map(col => ({ col, val: row[col] })).filter(d => d.val !== null && d.val !== '' && !isNaN(Number(d.val)));
+  if (extData.length === 0) {
+    inner.innerHTML = '<div style="color:var(--text-dim);font-size:11px;font-style:italic">No extension variables for this day.</div>';
+    return;
+  }
+
+  // Group into chunks of ~6 for layout
+  const section = document.createElement('div');
+  section.className = 'detail-section';
+  section.innerHTML = '<h4>Extension Variables</h4>';
+  const maxVal = Math.max(...extData.map(d=>Number(d.val)));
+
+  extData.forEach(({col,val}) => {
+    const pct = maxVal > 0 ? (Number(val)/maxVal)*100 : 0;
+    section.innerHTML += `
+      <div class="ext-row">
+        <span class="ext-name" title="${col}">${col}</span>
+        <div class="ext-bar-bg"><div class="ext-bar-fill" style="width:${pct}%"></div></div>
+        <span class="ext-val">${Number(val).toFixed(2)}</span>
+      </div>`;
+  });
+  inner.appendChild(section);
+}
+
+// ══════════════════════════════════
+// DEMOGRAPHIC PAGE
+// ══════════════════════════════════
+function renderDemographic() {
+  const demoVar = document.getElementById('demoVarSelect').value;
+  if (!demoVar) return;
+
+  const content = document.getElementById('demoContent');
+  content.innerHTML = '';
+
+  // Get unique groups — find demo value per participant (take first non-null row)
+  const groupMap = {};
+  participants.forEach(pid => {
+    const rows = getParticipantRows(pid);
+    const val = rows.map(r=>r[demoVar]).find(v=>v!==null&&v!==''&&v!==undefined);
+    if (val !== null && val !== undefined && val !== '') {
+      const key = String(val);
+      if (!groupMap[key]) groupMap[key] = [];
+      groupMap[key].push(...rows);
+    }
+  });
+
+  const groups = Object.keys(groupMap).sort();
+  if (groups.length === 0) {
+    content.innerHTML = '<div class="page-empty"><h3>No data</h3><p>No values found for this variable.</p></div>';
+    return;
+  }
+
+  const labels = dayLabels.map(d=>d.label);
+
+  // Summary cards per group
+  const summaryEl = document.createElement('div');
+  summaryEl.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:1px;background:var(--border);border:1px solid var(--border);border-radius:4px;overflow:hidden;margin-bottom:24px';
+  groups.forEach(g => {
+    const rows = groupMap[g];
+    const subjs = rows.map(r=>Number(r.subjective_time)).filter(v=>!isNaN(v));
+    const objs  = rows.map(r=>Number(r.objective_time)).filter(v=>!isNaN(v));
+    const errs  = rows.map(r=>calcError(Number(r.subjective_time),Number(r.objective_time))).filter(v=>v!==null);
+    const avgE  = mean(errs);
+    const cls   = avgE!==null?(avgE>5?'col-over':avgE<-5?'col-under':'col-exact'):'';
+    summaryEl.innerHTML += `
+      <div class="stat-card">
+        <span class="stat-label">${demoVar}: ${g}</span>
+        <span class="stat-value ${cls}">${avgE!==null?(avgE>0?'+':'')+Math.round(avgE)+'%':'—'}</span>
+        <span class="stat-sub">avg error · ${rows.length} obs · ${new Set(rows.map(r=>r.participant_id)).size} participants</span>
+      </div>`;
+  });
+  content.appendChild(summaryEl);
+
+  // Line charts: one per group, side by side
+  const chartGrid = document.createElement('div');
+  chartGrid.className = 'demo-comparison';
+  content.appendChild(chartGrid);
+
+  groups.forEach((g, gi) => {
+    const rows = groupMap[g];
+    const avgByDay = (col) => dayLabels.map(dl => {
+      const vals = rows.filter(r=>String(r.day)===String(dl.raw)).map(r=>Number(r[col])).filter(v=>!isNaN(v));
+      return mean(vals);
+    });
+    const subjD = avgByDay('subjective_time'), objD = avgByDay('objective_time');
+    const errD  = subjD.map((s,i)=>calcError(s,objD[i]));
+    const n = new Set(rows.map(r => r.participant_id)).size;
+    buildDualPanel(chartGrid, `Screen Time · ${demoVar}: ${g} · n=${n}`, labels, subjD, objD, errD, `demo_time_${gi}`, 'minutes (avg)', 'Objective');
+  });
+
+  // Reset AI
+  document.getElementById('demoAiContent').innerHTML = '<span class="ai-placeholder">Click Generate for an AI interpretation of group differences.</span>';
+  document.getElementById('demoAiBtn').textContent = 'Generate';
+}
+
+// ══════════════════════════════════
+// AI INTERPRETATION
+// ══════════════════════════════════
+async function generateAI(page) {
+  const btnId = `${page === 'overview' ? 'ov' : page === 'individual' ? 'ind' : 'demo'}AiBtn`;
+  const contentId = btnId.replace('Btn','Content');
+  const btn = document.getElementById(btnId);
+  const content = document.getElementById(contentId);
+
+  btn.disabled = true; btn.textContent = 'Generating…';
+  content.innerHTML = '<div class="ai-loading"><div class="ai-spinner"></div>Analyzing data…</div>';
+
+  let prompt = '';
+
+  if (page === 'overview') {
+    const n = participants.length;
+    const allErrors = parsedData.map(r=>calcError(Number(r.subjective_time),Number(r.objective_time))).filter(v=>v!==null);
+    const avgErr = mean(allErrors);
+    const pkErrors = parsedData.map(r=>calcError(Number(r.subjective_pickups),Number(r.objective_pickups))).filter(v=>v!==null);
+    const avgPkErr = mean(pkErrors);
+
+    prompt = `You are analyzing a dataset of ${n} participants tracking self-reported vs objective social media use.
+
+Overall statistics:
+- Average screen time estimation error: ${avgErr!==null?(avgErr>0?'+':'')+avgErr.toFixed(1)+'%':'n/a'} (positive = overestimate, negative = underestimate)
+- Average pickup estimation error: ${avgPkErr!==null?(avgPkErr>0?'+':'')+avgPkErr.toFixed(1)+'%':'n/a'}
+- Total observations: ${parsedData.length}
+- Days covered: ${dayLabels.map(d=>d.label).join(', ')}
+${extCols.length > 0 ? `- Extension variables present: ${extCols.join(', ')}` : ''}
+
+Write a concise 3–5 sentence interpretation of the overall self-report bias patterns in this dataset. Comment on the direction and magnitude of bias in screen time and pickups, any notable day-to-day patterns, and what this suggests about participants' self-awareness of their social media use. Be specific with numbers. Plain prose, no bullet points.`;
+  }
+
+  else if (page === 'individual') {
+    const pid = document.getElementById('ppSelect').value;
+    const rows = getParticipantRows(pid);
+    const dayLines = dayLabels.map(dl => {
+      const r = rows.find(r2=>String(r2.day)===String(dl.raw));
+      if (!r) return null;
+      const tErr = calcError(Number(r.subjective_time), Number(r.objective_time));
+      const pErr = calcError(Number(r.subjective_pickups), Number(r.objective_pickups));
+      const extStr = extCols.map(c=>r[c]!==null&&r[c]!==''?`${c}=${r[c]}`:'').filter(Boolean).join(', ');
+      return `${dl.label}: screen time subj=${r.subjective_time}min obj=${r.objective_time}min error=${tErr!==null?(tErr>0?'+':'')+Math.round(tErr)+'%':'n/a'} | pickups subj=${r.subjective_pickups} obj=${r.objective_pickups} error=${pErr!==null?(pErr>0?'+':'')+Math.round(pErr)+'%':'n/a'}${extStr?' | '+extStr:''}`;
+    }).filter(Boolean);
+
+    prompt = `You are analyzing self-report bias for participant ${pid}.
+
+Daily data:
+${dayLines.join('\n')}
+
+Write a concise 3–5 sentence interpretation of this participant's self-report bias patterns. Comment on the direction and magnitude of bias in screen time and pickups, any day-to-day variation, and any interesting patterns with the extension variables if present. Be specific with numbers. Plain prose, no bullet points.`;
+  }
+
+  else if (page === 'demographic') {
+    const demoVar = document.getElementById('demoVarSelect').value;
+    const groupMap = {};
+    participants.forEach(pid => {
+      const rows = getParticipantRows(pid);
+      const val = rows.map(r=>r[demoVar]).find(v=>v!==null&&v!==''&&v!==undefined);
+      if (val !== null && val !== undefined && val !== '') {
+        const key = String(val);
+        if (!groupMap[key]) groupMap[key] = [];
+        groupMap[key].push(...rows);
+      }
+    });
+    const groupLines = Object.entries(groupMap).map(([g,rows]) => {
+      const errs = rows.map(r=>calcError(Number(r.subjective_time),Number(r.objective_time))).filter(v=>v!==null);
+      const avgE = mean(errs);
+      return `${demoVar}="${g}": avg error=${avgE!==null?(avgE>0?'+':'')+avgE.toFixed(1)+'%':'n/a'}, n=${new Set(rows.map(r=>r.participant_id)).size} participants`;
+    });
+
+    prompt = `You are analyzing how self-report bias in social media screen time estimation differs across groups defined by "${demoVar}".
+
+Group statistics:
+${groupLines.join('\n')}
+
+Write a concise 3–5 sentence interpretation of the group differences. Comment on which group shows the most bias, whether the direction differs across groups, and what this might suggest. Be specific with numbers. Plain prose, no bullet points.`;
+  }
+
+  try {
+    const response = await fetch('http://localhost:3001/api/messages', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:600, messages:[{role:'user',content:prompt}] })
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(()=>({}));
+      throw new Error(err.error?.message || `HTTP ${response.status}`);
+    }
+    const data = await response.json();
+    const text = data.content?.find(b=>b.type==='text')?.text || '';
+    if (!text) throw new Error('No response received.');
+    content.style.opacity='0';
+    content.innerHTML = `<p style="line-height:1.85">${text.replace(/\n\n/g,'</p><p style="line-height:1.85;margin-top:12px">').replace(/\n/g,' ')}</p>`;
+    content.style.transition='opacity 0.4s ease';
+    requestAnimationFrame(()=>{ content.style.opacity='1'; });
+  } catch(e) {
+    content.innerHTML = `<span class="ai-error">Could not generate interpretation: ${e.message}</span>`;
+  } finally {
+    btn.disabled=false; btn.textContent='Regenerate';
+  }
+}
+</script>
+</body>
+</html>
